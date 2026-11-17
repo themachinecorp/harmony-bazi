@@ -5,7 +5,7 @@ BASE=/storage/Users/currentUser/Documents/DevEcoStudioProjects
 mkdir -p "$BASE"
 cd "$BASE"
 rm -rf harmony-bazi-main BaziFortune
-curl -fsSL -o bazi.tgz https://github.com/themachinecorp/harmony-bazi/archive/refs/heads/main.tar.gz
+curl -fsSL --noproxy '*' -o bazi.tgz https://github.com/themachinecorp/harmony-bazi/archive/refs/heads/main.tar.gz
 tar xzf bazi.tgz
 mv harmony-bazi-main BaziFortune
 cd BaziFortune
