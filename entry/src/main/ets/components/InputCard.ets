@@ -80,8 +80,8 @@ export struct InputCard {
     TimePickerDialog.show({
       selected: new Date(2020, 0, 1, this.birth.h, this.birth.mi),
       useMilitaryTime: true,
-      onAccept: (value: Date) => {
-        this.patch({ h: value.getHours(), mi: value.getMinutes() })
+      onAccept: (value: TimePickerResult) => {
+        this.patch({ h: value.hour, mi: value.minute })
       }
     })
   }
