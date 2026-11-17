@@ -1,0 +1,7 @@
+{
+  "modelVersion": "5.0.0",
+  "name": "harmony-bazi",
+  "version": "1.0.0",
+  "description": "今日运势 · 八字排盘（鸿蒙手机端）",
+  "dependencies": {}
+}

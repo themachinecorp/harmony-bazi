@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "今日运势 · 八字排盘"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "按真太阳时排八字、大运、流年，给出当天干支与运势"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "八字运势"
+    }
+  ]
+}

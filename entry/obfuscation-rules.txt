@@ -1,0 +1,8 @@
+# 混淆规则文件。
+#
+# 当前 release 构建未开启混淆（build-profile.json5 里 enable: false），
+# 这个文件保留是为了以后要开启时有个起点。
+#
+# 协议层的字段名会出现在 JSON 里，不能被改名：
+-keep interface com.dsh.mobile.model.** { *; }
+-keep class com.dsh.mobile.store.** { *; }
