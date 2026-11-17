@@ -40,6 +40,7 @@ export interface BirthInput {
   gender: string
   dst: boolean
   unknownHour: boolean
+  cityIdx?: number
 }
 
 export interface SolarInfo {

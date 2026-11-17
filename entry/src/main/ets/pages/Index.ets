@@ -12,17 +12,19 @@ import { Theme } from '../model/Theme'
 @Entry
 @Component
 struct Index {
-  @State private gender: string = 'm'
-  @State private birthY: number = 1990
-  @State private birthM: number = 6
-  @State private birthD: number = 15
-  @State private birthH: number = 14
-  @State private birthMi: number = 30
-  @State private lon: number = 116.41
-  @State private lonText: string = '116.41'
-  @State private cityIdx: number = 0
-  @State private dst: boolean = false
-  @State private unknownHour: boolean = false
+  @State private birth: BirthInput = {
+    y: 1990,
+    m: 6,
+    d: 15,
+    h: 14,
+    mi: 30,
+    lon: 116.41,
+    tz: 8,
+    gender: 'm',
+    dst: false,
+    unknownHour: false,
+    cityIdx: 0
+  }
   @State private chart: Chart | null = null
   @State private fortune: Fortune | null = null
   @State private years: YearItem[] = []
@@ -36,34 +38,26 @@ struct Index {
   async restore(): Promise<void> {
     const o: BirthInput | null = await birthStore.load()
     if (o !== null) {
-      this.gender = o.gender
-      this.birthY = o.y
-      this.birthM = o.m
-      this.birthD = o.d
-      this.birthH = o.h
-      this.birthMi = o.mi
-      this.lon = o.lon
-      this.lonText = o.lon.toFixed(2)
-      this.dst = o.dst
-      this.unknownHour = o.unknownHour
+      this.birth = {
+        y: o.y,
+        m: o.m,
+        d: o.d,
+        h: o.h,
+        mi: o.mi,
+        lon: o.lon,
+        tz: o.tz > 0 ? o.tz : 8,
+        gender: o.gender,
+        dst: o.dst,
+        unknownHour: o.unknownHour,
+        cityIdx: o.cityIdx === undefined ? 0 : o.cityIdx
+      }
       this.compute()
     }
     this.loaded = true
   }
 
   compute(): void {
-    const o: BirthInput = {
-      y: this.birthY,
-      m: this.birthM,
-      d: this.birthD,
-      h: this.birthH,
-      mi: this.birthMi,
-      lon: this.lon,
-      tz: 8,
-      gender: this.gender,
-      dst: this.dst,
-      unknownHour: this.unknownHour
-    }
+    const o: BirthInput = this.birth
     const c: Chart = buildChart(o)
     const spec = beijingNow()
     const f: Fortune = dailyFortune(c, spec, o.lon, 8)
@@ -72,6 +66,10 @@ struct Index {
     this.years = yearList(c, spec.y - 2, spec.y + 5)
     this.editing = false
     birthStore.save(o)
+  }
+
+  onBirthChange(b: BirthInput): void {
+    this.birth = b
   }
 
   build() {
@@ -118,19 +116,17 @@ struct Index {
 
           if (this.chart === null || this.editing) {
             InputCard({
-              gender: $$this.gender,
-              birthY: $$this.birthY,
-              birthM: $$this.birthM,
-              birthD: $$this.birthD,
-              birthH: $$this.birthH,
-              birthMi: $$this.birthMi,
-              lon: $$this.lon,
-              lonText: $$this.lonText,
-              cityIdx: $$this.cityIdx,
-              dst: $$this.dst,
-              unknownHour: $$this.unknownHour,
-              onCompute: () => { this.compute() }
+              birth: this.birth,
+              onChange: (b: BirthInput) => { this.onBirthChange(b) }
             })
+            Button('排 盘')
+              .width('100%')
+              .height(44)
+              .fontSize(16)
+              .fontColor('#FFFFFF')
+              .backgroundColor(Theme.RED)
+              .borderRadius(10)
+              .onClick(() => { this.compute() })
           }
 
           Text('算法：太阳视黄经用截断 VSOP87 计算，节气时刻误差 < 2 分钟；日柱 23:00 换日，年柱以立春为界，月柱以十二节为界。运势评分属民俗算法，仅供娱乐参考。')
@@ -153,7 +149,6 @@ struct Index {
     const spec = beijingNow()
     const wd: string[] = ['日', '一', '二', '三', '四', '五', '六']
     const dow: number = new Date(Date.now() + 8 * 3600 * 1000).getUTCDay()
-    return spec.y.toString() + '-' + pad2(spec.m) + '-' + pad2(spec.d) +
-      ' 周' + wd[dow]
+    return spec.y.toString() + '-' + pad2(spec.m) + '-' + pad2(spec.d) + ' 周' + wd[dow]
   }
 }

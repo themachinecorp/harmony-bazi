@@ -16,6 +16,14 @@ export struct ChartCard {
     return ['年柱', '月柱', '日柱', '时柱']
   }
 
+  private hiddenText(p: Pillar): string {
+    let s: string = ''
+    for (let i = 0; i < p.hidden.length; i++) {
+      s += (i > 0 ? ' ' : '') + p.hidden[i].g + '(' + p.hidden[i].god + ')'
+    }
+    return s
+  }
+
   @Builder
   cell(text: string, big: boolean) {
     Text(text)
@@ -67,11 +75,7 @@ export struct ChartCard {
       Row() {
         this.cell('', false)
         ForEach(this.pillars(), (p: Pillar) => {
-          let s: string = ''
-          for (let i = 0; i < p.hidden.length; i++) {
-            s += (i > 0 ? ' ' : '') + p.hidden[i].g + '(' + p.hidden[i].god + ')'
-          }
-          this.cell(s, false)
+          this.cell(this.hiddenText(p), false)
         }, (p: Pillar) => p.zwx)
       }
       .width('100%')
