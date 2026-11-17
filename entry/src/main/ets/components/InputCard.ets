@@ -2,7 +2,6 @@
  * 生辰录入卡：性别 / 日期 / 时间 / 出生地经度 / 夏令时 / 时辰未知
  * 用 @Prop + onChange 回调（不使用 @Link/$$ 语法，跨组件更稳）
  */
-import { promptAction } from '@kit.ArkUI'
 import { BirthInput, CITIES, City, pad2 } from '../model/Bazi'
 import { Theme } from '../model/Theme'
 
@@ -67,18 +66,18 @@ export struct InputCard {
   }
 
   private pickDate(): void {
-    promptAction.showDatePicker({
+    DatePickerDialog.show({
       start: new Date(1900, 0, 1),
       end: new Date(2100, 11, 31),
       selected: new Date(this.birth.y, this.birth.m - 1, this.birth.d),
-      onAccept: (value: Date) => {
+      onDateAccept: (value: Date) => {
         this.patch({ y: value.getFullYear(), m: value.getMonth() + 1, d: value.getDate() })
       }
     })
   }
 
   private pickTime(): void {
-    promptAction.showTimePicker({
+    TimePickerDialog.show({
       selected: new Date(2020, 0, 1, this.birth.h, this.birth.mi),
       useMilitaryTime: true,
       onAccept: (value: Date) => {
@@ -106,7 +105,6 @@ export struct InputCard {
         Text('性别').fontSize(13).fontColor(Theme.DIM).width(56)
         Radio({ value: 'm', group: 'g' })
           .checked(this.birth.gender === 'm')
-          .selectedColor(Theme.GOLD)
           .onChange((checked: boolean) => {
             if (checked) {
               this.patch({ gender: 'm' })
@@ -115,7 +113,6 @@ export struct InputCard {
         Text('男').fontSize(14).fontColor(Theme.TEXT)
         Radio({ value: 'f', group: 'g' })
           .checked(this.birth.gender === 'f')
-          .selectedColor(Theme.GOLD)
           .onChange((checked: boolean) => {
             if (checked) {
               this.patch({ gender: 'f' })
