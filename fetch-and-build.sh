@@ -1,5 +1,5 @@
 #!/bin/bash
-# 一条命令：拉取源码并编译（在笔记本上执行）
+# 一条命令：拉取源码并编译（笔记本上执行）
 set -e
 BASE=/storage/Users/currentUser/Documents/DevEcoStudioProjects
 mkdir -p "$BASE"
