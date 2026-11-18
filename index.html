@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>今日运势 · 八字排盘</title>
+<style>
+:root{--bg:#0e1014;--card:#171a21;--line:#262b36;--txt:#e8e6e3;--dim:#8d93a3;--gold:#d9b36c;--red:#c2410c;--ok:#4ade80;--bad:#f87171}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#1b1f2a,var(--bg));color:var(--txt);
+ font:15px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh}
+.wrap{max-width:1060px;margin:0 auto;padding:24px 16px 60px}
+h1{font-family:"Songti SC","STSong","SimSun",serif;font-size:26px;letter-spacing:6px;margin:0 0 4px;color:var(--gold)}
+.sub{color:var(--dim);font-size:13px;margin-bottom:20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+label{display:block;font-size:12px;color:var(--dim);margin-bottom:5px}
+input,select{width:100%;padding:9px 10px;background:#0f1218;border:1px solid var(--line);border-radius:8px;color:var(--txt);font-size:14px}
+input:focus,select:focus{outline:none;border-color:var(--gold)}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+.chk{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--txt);margin:6px 0}
+.chk input{width:auto}
+.btn{background:linear-gradient(180deg,#c2410c,#9a3412);border:0;color:#fff;padding:10px 22px;border-radius:9px;font-size:15px;cursor:pointer;letter-spacing:2px}
+.btn.ghost{background:#1e232d;color:var(--dim);border:1px solid var(--line)}
+h2{font-family:"Songti SC","STSong",serif;font-size:17px;letter-spacing:3px;color:var(--gold);margin:0 0 12px;padding-left:10px;border-left:3px solid var(--red)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line)}
+th{color:var(--dim);font-weight:400;font-size:12px}
+td.gz{font-family:"Songti SC","STSong",serif;font-size:22px;letter-spacing:2px}
+.hi{background:rgba(194,65,12,.14)}
+.pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;border:1px solid var(--line);color:var(--dim)}
+.pill.ok{color:var(--ok);border-color:rgba(74,222,128,.35)}
+.pill.bad{color:var(--bad);border-color:rgba(248,113,113,.35)}
+.score{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.score .num{font-size:62px;line-height:1;font-family:"Songti SC","STSong",serif;font-weight:700}
+.bar{flex:1;min-width:200px}
+.bar .t{height:8px;background:#0f1218;border-radius:99px;overflow:hidden;border:1px solid var(--line)}
+.bar .f{height:100%;background:linear-gradient(90deg,#9a3412,var(--gold))}
+.lv{font-size:20px;font-family:"Songti SC",serif;letter-spacing:3px;margin-top:6px}
+.yj{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:620px){.yj{grid-template-columns:1fr}}
+.yj ul{margin:0;padding-left:18px}
+.yj li{margin:3px 0;font-size:14px}
+.yj .y h3{color:var(--ok);font-size:14px;margin:0 0 6px}
+.yj .j h3{color:var(--bad);font-size:14px;margin:0 0 6px}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.kv{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.kv span:first-child{color:var(--dim)}
+.kv.col{display:block;background:#12151c;border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+.kv.col b{display:block;margin-top:4px;font-weight:500;font-size:14px;color:var(--txt)}
+.small{font-size:12px;color:var(--dim);line-height:1.7}
+.tips{font-size:12px;color:var(--dim);margin-top:8px}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>今 日 运 势</h1>
+  <div class="sub">真太阳时排盘 · 八字 / 大运 / 流年 · 今日干支与综合运势</div>
+
+  <div class="card">
+    <h2>生辰录入</h2>
+    <div class="grid">
+      <div><label>性别（定大运顺逆）</label><select id="gender"><option value="m">男</option><option value="f">女</option></select></div>
+      <div><label>出生日期</label><input type="date" id="bd"></div>
+      <div><label>出生时间（钟表时）</label><input type="time" id="bt" value="12:00"></div>
+      <div><label>出生地</label><select id="city"></select></div>
+      <div><label>出生地经度（东经）</label><input type="number" id="lon" step="0.01"></div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <label class="chk"><input type="checkbox" id="dst"> 出生时为夏令时（+1小时，1986–1991）</label>
+      <label class="chk"><input type="checkbox" id="nohour"> 时辰未知（不算时柱）</label>
+      <div style="flex:1"></div>
+      <button class="btn" id="go">排 盘</button>
+      <button class="btn ghost" id="clear">清空</button>
+    </div>
+    <div class="tips">出生地经度用于换算真太阳时（经度时差 + 均时差），直接决定时柱与月柱边界。</div>
+  </div>
+
+  <div id="out" class="hide">
+    <div class="card">
+      <h2>今日概览</h2>
+      <div class="row" style="margin-bottom:14px">
+        <div><label>查看日期</label><input type="date" id="target"></div>
+        <div style="align-self:end"><button class="btn ghost" id="today">回到今天</button></div>
+      </div>
+      <div id="todayHead"></div>
+      <div class="score" style="margin-top:18px">
+        <div><div class="num" id="scoreNum">--</div><div class="lv" id="scoreLv"></div></div>
+        <div class="bar"><div class="t"><div class="f" id="scoreBar" style="width:0%"></div></div>
+          <div class="small" id="scoreTip" style="margin-top:8px"></div></div>
+      </div>
+      <div class="tags" id="todayTags"></div>
+      <div class="yj" style="margin-top:16px">
+        <div class="y"><h3>宜</h3><ul id="yi"></ul></div>
+        <div class="j"><h3>忌</h3><ul id="ji"></ul></div>
+      </div>
+      <h2 style="margin-top:22px">今日解读</h2>
+      <div id="notes" class="small"></div>
+    </div>
+
+    <div class="card">
+      <h2>命盘四柱</h2>
+      <table id="chart"></table>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:14px" id="info"></div>
+    </div>
+
+    <div class="card">
+      <h2>大运</h2>
+      <div id="yunInfo" class="small" style="margin-bottom:10px"></div>
+      <table id="yun"></table>
+    </div>
+
+    <div class="card">
+      <h2>流年</h2>
+      <table id="liun"></table>
+    </div>
+
+    <div class="card">
+      <h2>真太阳时换算</h2>
+      <div id="solar"></div>
+    </div>
+
+    <div class="card small">
+      算法：太阳视黄经用截断 VSOP87（Meeus）计算，节气时刻与香港天文台发布值相差 &lt;2 分钟（内置 ΔT≈69s 偏差）；日柱采用 23:00 换日（晚子时归次日）；月柱以十二节为界，年柱以立春为界。
+      运势评分由十神喜忌、地支刑冲合害、大运流年与命局互动加权合成，属民俗算法，不作科学依据。
+    </div>
+  </div>
+</div>
+
+<script src="bazi.js"></script>
+<script>
+const $=s=>document.querySelector(s), B=window.Bazi;
+const G=B.GAN,Z=B.ZHI;
+
+/* 城市下拉 */
+(function(){
+  const sel=$('#city'), seen={};
+  B.CITIES.forEach(([n,l])=>{ if(!seen[n]){seen[n]=1; const o=document.createElement('option');o.value=l;o.textContent=n;sel.appendChild(o);} });
+  const o=document.createElement('option'); o.value='custom'; o.textContent='其他（手填经度）'; sel.appendChild(o);
+  sel.onchange=()=>{ $('#lon').value = sel.value==='custom'? $('#lon').value||'116.4' : sel.value; };
+})();
+function setCity(lon){
+  $('#lon').value=lon;
+  const opts=[...$('#city').options].filter(o=>o.value!=='custom');
+  let best=null,bd=1e9;
+  opts.forEach(o=>{ const d=Math.abs(parseFloat(o.value)-lon); if(d<bd){bd=d;best=o;} });
+  if(best && bd<0.5){ $('#city').value=best.value; }
+  else { $('#city').value='custom'; }
+}
+/* 北京时间（UTC+8）的日期与时刻 */
+function bjNow(){ const d=new Date(Date.now()+8*3600*1000);
+  return {y:d.getUTCFullYear(), m:d.getUTCMonth()+1, d:d.getUTCDate(), h:d.getUTCHours(), mi:d.getUTCMinutes()}; }
+function bjToday(){ const n=bjNow(); return n.y+'-'+pad(n.m)+'-'+pad(n.d); }
+$('#lon').oninput=()=>{ if($('#city').value!=='custom') $('#city').value='custom'; };
+
+function fmt(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function parseD(s){ const p=s.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); }
+const WD=['日','一','二','三','四','五','六'];
+
+/* 读取 + 渲染 */
+let chart=null;
+function readForm(){
+  const bd=$('#bd').value, bt=$('#bt').value||'12:00';
+  if(!bd){ alert('请填写出生日期'); return null; }
+  const d=parseD(bd), t=bt.split(':').map(Number);
+  let lon=parseFloat($('#lon').value);
+  if(!isFinite(lon)||lon<-180||lon>180){ alert('出生地经度须在 -180~180 之间（东经为正），已按 120°E 计算'); lon=120; }
+  return { y:d.getFullYear(), m:d.getMonth()+1, d:d.getDate(), h:t[0], mi:t[1],
+    lon:lon, tz:8, gender:$('#gender').value,
+    dst:$('#dst').checked, unknownHour:$('#nohour').checked };
+}
+function godTxt(p){ return p.god; }
+function render(){
+  const o=readForm(); if(!o) return;
+  chart=B.buildChart(o);
+  const bn=bjNow();
+  const tgt=$('#target').value?parseD($('#target').value):new Date();
+  const spec={ y:tgt.getFullYear(), m:tgt.getMonth()+1, d:tgt.getDate(), h:bn.h, mi:bn.mi };
+  const f=B.dailyFortune(chart,spec,o.lon,8);
+  $('#out').classList.remove('hide');
+
+  /* 今日概览 */
+  const t=f.today, w=WD[tgt.getDay()];
+  $('#todayHead').innerHTML=`<div class="kv"><span>日期</span><span>${fmt(tgt)} 星期${w}　|　干支纪年 ${t.solarYear} 年（${t.year.name}年）</span></div>
+    <div class="kv"><span>今日四柱</span><span>${t.year.name} ${t.month.name} ${t.day.name} ${t.hour.name}</span></div>
+    <div class="kv"><span>节气月令</span><span>${t.jie.prev.name}（${B.jdToLocalStr(t.jie.prev.jd,8)}）后 · ${t.jie.next.name}（${B.jdToLocalStr(t.jie.next.jd,8)}）前</span></div>
+    <div class="kv"><span>当前大运</span><span>${f.curYun?f.curYun.name+'　'+f.curYun.ageFrom+'–'+f.curYun.ageTo+'岁':'—'}</span></div>`;
+  const col=f.score>=72?'var(--ok)':(f.score>=58?'var(--gold)':'var(--bad)');
+  $('#scoreNum').textContent=f.score; $('#scoreNum').style.color=col;
+  $('#scoreLv').textContent=f.label; $('#scoreLv').style.color=col;
+  $('#scoreBar').style.width=f.score+'%';
+  $('#scoreTip').textContent=`基于「${chart.strength.stateText}·日主${G[chart.dayGan]}」的喜用神判定，与流年${t.year.name}、大运${f.curYun?f.curYun.name:'—'}、今日${t.day.name}综合加权`;
+  $('#todayTags').innerHTML=[
+    `日主 ${G[chart.dayGan]}（${chart.strength.dayWx}）`,
+    chart.strength.stateText,
+    `喜 ${chart.strength.favText}`,
+    `忌 ${chart.strength.unfavText}`,
+    `流年 ${t.year.name} ${B.tenGod(chart.dayGan,G[t.year.gan])}`,
+    `今日 ${t.day.name} ${B.tenGod(chart.dayGan,G[t.day.gan])}`
+  ].map(x=>`<span class="pill">${x}</span>`).join('');
+  $('#yi').innerHTML=f.yi.map(x=>`<li>${x}</li>`).join('');
+  $('#ji').innerHTML=f.ji.map(x=>`<li>${x}</li>`).join('');
+  $('#notes').innerHTML=f.notes.map(n=>`<div style="padding:3px 0">· ${n.text}</div>`).join('')
+    +`<div style="margin-top:8px;color:var(--dim)">评分构成：${f.sig.map(s=>`${s.label}(${s.value>0?'+':''}${(s.value*s.weight).toFixed(1)}分)`).join('、')}</div>`;
+
+  /* 命盘 */
+  const P=chart.pillars, cols=[['年柱',P.year],['月柱',P.month],['日柱',P.day],['时柱',P.hour]];
+  let html='<tr><th></th>'+cols.map(c=>`<th>${c[0]}</th>`).join('')+'</tr>';
+  html+='<tr><th>干支</th>'+cols.map(c=>`<td class="gz">${c[1]?c[1].name:'—'}</td>`).join('')+'</tr>';
+  html+='<tr><th>十神</th>'+cols.map(c=>`<td>${c[1]?c[1].god:'—'}</td>`).join('')+'</tr>';
+  html+='<tr><th>五行</th>'+cols.map(c=>`<td>${c[1]?c[1].wx+' / '+c[1].zwx:'—'}</td>`).join('')+'</tr>';
+  html+='<tr><th>藏干</th>'+cols.map(c=>`<td class="small">${c[1]?c[1].hidden.map(h=>h.g+'('+h.god+')').join(' '):'—'}</td>`).join('')+'</tr>';
+  html+='<tr><th>自刑/冲合</th>'+cols.map(c=>`<td class="small">${c[1]?relTo(c[1].zhi,P.day.zhi):'—'}</td>`).join('')+'</tr>';
+  $('#chart').innerHTML=html;
+  $('#info').innerHTML=[
+    ['日主', G[chart.dayGan]+' '+chart.strength.dayWx],
+    ['身强/身弱', chart.strength.stateText+`（同党 ${chart.strength.same} / 异党 ${chart.strength.other}）`],
+    ['喜用神', chart.strength.favText],
+    ['忌神', chart.strength.unfavText],
+    ['调候', chart.strength.tiaohou? '喜'+chart.strength.tiaohou+'（'+Z[P.month.zhi]+'月偏'+ZHIWX(Z[P.month.zhi])+'）':'—'],
+    ['月令', `${P.month.name}（${P.month.god}）`]
+  ].map(([k,v])=>`<div class="kv col"><span>${k}</span><b>${v}</b></div>`).join('');
+
+  /* 大运 */
+  $('#yunInfo').innerHTML=`${chart.yun.dirText}（${G[P.year.gan]}年，${chart.yun.dir>0?'阳年男/阴年女顺行':'阴年男/阳年女逆行'}）　出生至${chart.yun.dir>0?'下':'上'}一节 ${chart.yun.days.toFixed(2)} 天　起运 ${chart.yun.startText}（约 ${chart.yun.startAge.toFixed(1)} 岁）　交运 ${chart.yun.qiuYun}`;
+  const ageNow=(tgt.getFullYear()-o.y)+((tgt.getMonth()+1-o.m)/12);
+  $('#yun').innerHTML='<tr><th>大运</th><th>十神</th><th>五行</th><th>年龄</th><th>年份</th></tr>'
+   + chart.yun.list.map(y=>{
+      const cur = ageNow>=y.ageFrom && ageNow<y.ageTo;
+      return `<tr class="${cur?'hi':''}"><td class="gz">${y.name}${cur?' <span class="pill">当前</span>':''}</td><td>${y.god}</td><td>${y.wx}/${y.zwx}</td><td>${y.ageFrom}–${y.ageTo}</td><td>${y.yearFrom}–${y.yearTo}</td></tr>`;
+    }).join('');
+
+  /* 流年 */
+  const y0=tgt.getFullYear();
+  $('#liun').innerHTML='<tr><th>年份</th><th>干支</th><th>十神</th><th>与日支</th></tr>'
+   + B.yearList(y0-2,y0+5).map(y=>{
+      const g=B.tenGod(chart.dayGan,G[y.gan]), rel=B.branchRel(Z[y.zhi],P.day.zhi);
+      return `<tr class="${y.year===y0?'hi':''}"><td>${y.year}</td><td class="gz">${y.name}</td><td>${g}</td><td class="small">${rel.length?rel.join('·'):'平'}</td></tr>`;
+    }).join('');
+
+  /* 真太阳时 */
+  const s=chart.solar, cal=s.true, pl=s.plain;
+  $('#solar').innerHTML=[
+    ['出生钟表时间', s.clock+'（UTC+8）'],
+    ['经度时差', `${s.lonAdjMin>=0?'+':''}${s.lonAdjMin.toFixed(1)} 分钟（经度 ${o.lon}°E）`],
+    ['均时差', `${s.eotMin>=0?'+':''}${s.eotMin.toFixed(1)} 分钟`],
+    ['平太阳时', `${pl.y}-${pad(pl.m)}-${pad(pl.d)} ${pad(pl.h)}:${pad(pl.mi)}`],
+    ['真太阳时', `${cal.y}-${pad(cal.m)}-${pad(cal.d)} ${pad(cal.h)}:${pad(cal.mi)}`],
+    ['所处节气', `${chart.jie.prev.name}（${B.jdToLocalStr(chart.jie.prev.jd,8)}）→ ${chart.jie.next.name}（${B.jdToLocalStr(chart.jie.next.jd,8)}）`]
+  ].map(([k,v])=>`<div class="kv col"><span>${k}</span><b>${v}</b></div>`).join('');
+
+  localStorage.setItem('bz', JSON.stringify({...o, target:$('#target').value}));
+}
+function ZHIWX(z){ return B.ZHI_WX[B.ZHI.indexOf(z)]; }
+function pad(n){ return String(n).padStart(2,'0'); }
+function relTo(z,dz){
+  const r=B.branchRel(z,dz); return r.length?r.join('·'):(z===dz?'':'—');
+}
+
+/* 事件 */
+$('#go').onclick=render;
+$('#clear').onclick=()=>{ $('#out').classList.add('hide'); localStorage.removeItem('bz'); };
+$('#target').onchange=()=>{ if(chart) render(); };
+$('#today').onclick=()=>{ $('#target').value=bjToday(); if(chart) render(); };
+
+/* 初始化 */
+(function init(){
+  $('#target').value=bjToday();
+  const s=localStorage.getItem('bz');
+  let o=null; try{ o=s?JSON.parse(s):null; }catch(e){}
+  // 支持链接参数 ?y=1990&m=6&d=15&h=14&mi=30&lon=116.4&g=m
+  const q=new URLSearchParams(location.search);
+  if(q.get('y')){
+    o={ y:+q.get('y'), m:+q.get('m')||1, d:+q.get('d')||1, h:+q.get('h')||12, mi:+q.get('mi')||0,
+        lon:+q.get('lon')||116.4, gender:q.get('g')||'m', dst:q.get('dst')==='1', unknownHour:q.get('nh')==='1', target:q.get('t')||'' };
+  }
+  if(o){ $('#gender').value=o.gender||'m'; $('#bd').value=o.y+'-'+pad(o.m)+'-'+pad(o.d); $('#bt').value=pad(o.h)+':'+pad(o.mi); setCity(o.lon); $('#dst').checked=!!o.dst; $('#nohour').checked=!!o.unknownHour; if(o.target)$('#target').value=o.target; render(); }
+  else { setCity(116.4); $('#bd').value='1990-06-15'; }
+})();
+</script>
+</body>
+</html>
