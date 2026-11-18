@@ -22,16 +22,27 @@ struct Result {
   }
 
   onPageShow(): void {
-    if (this.chart === null) {
-      this.load()
-    }
+    this.load()
+  }
+
+  /** 返回时清空缓存，避免下次进来残留旧结果 */
+  onPageHide(): void {
+    this.chart = null
+    this.fortune = null
+    this.years = []
+    this.summary = ''
+    birthStore.takePending()
   }
 
   async load(): Promise<void> {
-    if (this.chart !== null) {
-      return
+    // 每次进入都重新取数并重算，杜绝显示上一次的旧结果
+    this.chart = null
+    this.fortune = null
+    this.years = []
+    let o: BirthInput | null = birthStore.takePending()
+    if (o === null) {
+      o = await birthStore.load()
     }
-    const o: BirthInput | null = await birthStore.load()
     if (o === null) {
       router.back()
       return

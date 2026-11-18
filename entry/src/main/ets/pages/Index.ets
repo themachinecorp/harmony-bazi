@@ -62,6 +62,7 @@ struct Index {
       promptAction.showToast({ message: '出生地经度须在 -180~180 之间（东经为正）' })
       return
     }
+    birthStore.setPending(this.birth)
     await birthStore.save(this.birth)
     router.pushUrl({ url: 'pages/Result' })
   }
