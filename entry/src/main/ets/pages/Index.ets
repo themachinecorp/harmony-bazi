@@ -38,20 +38,26 @@ struct Index {
   async restore(): Promise<void> {
     const o: BirthInput | null = await birthStore.load()
     if (o !== null) {
+      // 自愈：存档里的经度若非法（旧版输入框 bug 可能存进脏值），退回北京并要求重填
+      const lonBad: boolean = !isFinite(o.lon) || o.lon < -180 || o.lon > 180
       this.birth = {
         y: o.y,
         m: o.m,
         d: o.d,
         h: o.h,
         mi: o.mi,
-        lon: o.lon,
+        lon: lonBad ? 116.41 : o.lon,
         tz: o.tz > 0 ? o.tz : 8,
         gender: o.gender,
         dst: o.dst,
         unknownHour: o.unknownHour,
-        cityIdx: o.cityIdx === undefined ? 0 : o.cityIdx
+        cityIdx: lonBad ? 0 : (o.cityIdx === undefined ? 0 : o.cityIdx)
       }
-      this.compute()
+      if (lonBad) {
+        this.editing = true
+      } else {
+        this.compute()
+      }
     }
     this.loaded = true
   }
