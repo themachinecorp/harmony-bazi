@@ -14,6 +14,15 @@ export struct ChartCard {
     return [this.chart.year, this.chart.month, this.chart.day, this.chart.hour]
   }
 
+  /** 藏干文本：戊(正印) 辛(比肩) 丁(七杀) */
+  private hiddenText(p: Pillar): string {
+    let s: string = ''
+    for (let i = 0; i < p.hidden.length; i++) {
+      s += (i > 0 ? '  ' : '') + p.hidden[i].g + '(' + p.hidden[i].god + ')'
+    }
+    return s
+  }
+
   private labels(): string[] {
     return ['年柱', '月柱', '日柱', '时柱']
   }
