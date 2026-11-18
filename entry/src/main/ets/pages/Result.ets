@@ -80,6 +80,15 @@ struct Result {
     this.getUIContext().getRouter().back()
   }
 
+  /** 扫描线行数（每 3px 一条） */
+  private scanlines(): number[] {
+    const out: number[] = []
+    for (let i = 0; i < 220; i++) {
+      out.push(i)
+    }
+    return out
+  }
+
   private chartText(): string {
     const c: Chart = this.chart as Chart
     return c.year.name.substring(0, 1) + ''
@@ -125,18 +134,23 @@ struct Result {
         .opacity(this.glow ? 0.7 : 0.35)
         .animation({ duration: 6800, curve: Curve.EaseInOut, iterations: -1, playMode: PlayMode.Alternate })
 
-      // 扫描线
-      Image($r('app.media.scanlines'))
-        .width('100%').height('100%')
-        .objectRepeat(ImageRepeat.Repeat)
-        .opacity(0.5)
-        .hitTestBehavior(HitTestMode.None)
+      // 扫描线（细线堆叠，不依赖图片平铺 API）
+      Column({ space: 2 }) {
+        ForEach(this.scanlines(), (i: number) => {
+          Row()
+            .width('100%').height(1)
+            .backgroundColor('#0AFF9C')
+            .opacity(0.05)
+        }, (i: number) => i.toString())
+      }
+      .width('100%')
+      .hitTestBehavior(HitTestMode.None)
 
       Column() {
       // 顶栏：返回 + 标题 + 生辰摘要
       Row({ space: 10 }) {
         Text('‹')
-          .fontSize(28).fontColor(Theme.GOLD)
+          .fontSize(28).fontColor(Theme.GREEN)
           .width(26)
           .onClick(() => { this.goBack() })
         Column({ space: 2 }) {
@@ -222,7 +236,7 @@ struct Result {
               .width('100%')
               .height(46)
               .fontSize(14)
-              .fontColor(Theme.GOLD)
+              .fontColor(Theme.GREEN)
               .backgroundColor(Theme.CARD)
               .borderRadius(14)
               .border({ width: 1, color: Theme.LINE })
