@@ -150,6 +150,9 @@ export struct InputCard {
           .backgroundColor(Theme.CARD2)
           .borderRadius(Theme.R_SM)
           .onChange((v: string) => {
+            if (v === this.lonStr) {
+              return
+            }
             this.emit(this.dateStr, this.timeStr, v, this.gender, this.dst, this.unknownHour, this.cityIdx)
           })
         Text('用于换算真太阳时，直接决定时柱与月柱边界').fontSize(11).fontColor(Theme.DIM)
@@ -206,6 +209,9 @@ export struct InputCard {
         .backgroundColor(Theme.CARD2)
         .borderRadius(Theme.R_SM)
         .onChange((v: string) => {
+          if (v === this.dateStr) {
+            return
+          }
           this.emit(v, this.timeStr, this.lonStr, this.gender, this.dst, this.unknownHour, this.cityIdx)
         })
     }
@@ -226,6 +232,9 @@ export struct InputCard {
         .backgroundColor(Theme.CARD2)
         .borderRadius(Theme.R_SM)
         .onChange((v: string) => {
+          if (v === this.timeStr) {
+            return
+          }
           this.emit(this.dateStr, v, this.lonStr, this.gender, this.dst, this.unknownHour, this.cityIdx)
         })
     }

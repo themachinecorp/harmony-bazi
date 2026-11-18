@@ -1,7 +1,6 @@
 /**
  * 结果页：今日概览 / 命盘四柱 / 大运流年 / 真太阳时；左上角返回可重新输入
  */
-import { router } from '@kit.ArkUI'
 import { BirthInput, FormData, Chart, Fortune, YearItem, buildChart, dailyFortune, yearList, beijingNow, pad2, formToBirth } from '../model/Bazi'
 import { birthStore } from '../store/BirthStore'
 import { TodayCard } from '../components/TodayCard'
@@ -43,12 +42,12 @@ struct Result {
       f = await birthStore.load()
     }
     if (f === null) {
-      router.back()
+      this.getUIContext().getRouter().back()
       return
     }
     const parsed = formToBirth(f)
     if (parsed === null) {
-      router.back()
+      this.getUIContext().getRouter().back()
       return
     }
     const o: BirthInput = parsed
@@ -65,7 +64,7 @@ struct Result {
   /** 返回录入页：先打标记，让录入页回填最近一次查询的信息 */
   private goBack(): void {
     birthStore.markReturned()
-    router.back()
+    this.getUIContext().getRouter().back()
   }
 
   private todayText(): string {

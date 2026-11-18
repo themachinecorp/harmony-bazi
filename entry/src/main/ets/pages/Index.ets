@@ -1,7 +1,6 @@
 /**
  * 生辰录入页：填信息 → 排盘 → 跳转结果页
  */
-import { router, promptAction } from '@kit.ArkUI'
 import { FormData, CITIES, formToBirth } from '../model/Bazi'
 import { birthStore } from '../store/BirthStore'
 import { InputCard } from '../components/InputCard'
@@ -42,6 +41,13 @@ struct Index {
   }
 
   onFormChange(f: FormData): void {
+    // 内容完全相同就不更新（否则会与输入框的 onChange 形成回环，界面直接卡死）
+    const o: FormData = this.form
+    if (o.dateStr === f.dateStr && o.timeStr === f.timeStr && o.lonStr === f.lonStr &&
+      o.gender === f.gender && o.dst === f.dst && o.unknownHour === f.unknownHour &&
+      o.cityIdx === f.cityIdx) {
+      return
+    }
     this.form = f
     birthStore.setDraft(f)
   }
@@ -63,14 +69,14 @@ struct Index {
   async compute(): Promise<void> {
     // 提交前校验格式（日期 1994-06-14 / 时间 14:30 / 经度 -180~180）
     if (formToBirth(this.form) === null) {
-      promptAction.showToast({ message: '请检查日期(1994-06-14)、时间(14:30)、经度格式' })
+      this.getUIContext().getPromptAction().showToast({ message: '请检查日期(1994-06-14)、时间(14:30)、经度格式' })
       return
     }
     // 记住「最近一次查询」：返回时表单据此回填，结果页也读它
     birthStore.setQueried(this.form)
     birthStore.setDraft(this.form)
     await birthStore.save(this.form)
-    router.pushUrl({ url: 'pages/Result' })
+    this.getUIContext().getRouter().pushUrl({ url: 'pages/Result' })
   }
 
   private formSummary(): string {
@@ -135,7 +141,7 @@ struct Index {
               .backgroundColor(Theme.CARD)
               .borderRadius(10)
               .border({ width: 1, color: Theme.LINE })
-              .onClick(() => { router.pushUrl({ url: 'pages/Result' }) })
+              .onClick(() => { this.getUIContext().getRouter().pushUrl({ url: 'pages/Result' }) })
           }
 
           Text('算法：太阳视黄经用截断 VSOP87 计算，节气时刻误差 < 2 分钟；日柱 23:00 换日，年柱以立春为界，月柱以十二节为界。运势评分属民俗算法，仅供娱乐参考。')
