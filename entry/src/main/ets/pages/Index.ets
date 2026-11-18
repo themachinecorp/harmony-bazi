@@ -1,12 +1,10 @@
 /**
- * 今日运势 · 八字排盘（鸿蒙手机端）
+ * 生辰录入页：填信息 → 排盘 → 跳转结果页
  */
-import { BirthInput, Chart, Fortune, YearItem, buildChart, dailyFortune, yearList, beijingNow, pad2 } from '../model/Bazi'
+import { router, promptAction } from '@kit.ArkUI'
+import { BirthInput, CITIES, City } from '../model/Bazi'
 import { birthStore } from '../store/BirthStore'
 import { InputCard } from '../components/InputCard'
-import { TodayCard } from '../components/TodayCard'
-import { ChartCard } from '../components/ChartCard'
-import { YunCard } from '../components/YunCard'
 import { Theme } from '../model/Theme'
 
 @Entry
@@ -25,10 +23,7 @@ struct Index {
     unknownHour: false,
     cityIdx: 0
   }
-  @State private chart: Chart | null = null
-  @State private fortune: Fortune | null = null
-  @State private years: YearItem[] = []
-  @State private editing: boolean = false
+  @State private hasSaved: boolean = false
   @State private loaded: boolean = false
 
   aboutToAppear(): void {
@@ -38,7 +33,6 @@ struct Index {
   async restore(): Promise<void> {
     const o: BirthInput | null = await birthStore.load()
     if (o !== null) {
-      // 自愈：存档里的经度若非法（旧版输入框 bug 可能存进脏值），退回北京并要求重填
       const lonBad: boolean = !isFinite(o.lon) || o.lon < -180 || o.lon > 180
       this.birth = {
         y: o.y,
@@ -53,36 +47,29 @@ struct Index {
         unknownHour: o.unknownHour,
         cityIdx: lonBad ? 0 : (o.cityIdx === undefined ? 0 : o.cityIdx)
       }
-      if (lonBad) {
-        this.editing = true
-      } else {
-        this.compute()
-      }
+      this.hasSaved = true
     }
     this.loaded = true
-  }
-
-  compute(): void {
-    const o: BirthInput = this.birth
-    const c: Chart = buildChart(o)
-    const spec = beijingNow()
-    const f: Fortune = dailyFortune(c, spec, o.lon, 8)
-    this.chart = c
-    this.fortune = f
-    this.years = yearList(c, spec.y - 2, spec.y + 5)
-    this.editing = false
-    birthStore.save(o)
   }
 
   onBirthChange(b: BirthInput): void {
     this.birth = b
   }
 
+  async compute(): Promise<void> {
+    // 提交前再校验一次经度（输入框可能还没失焦提交）
+    if (!isFinite(this.birth.lon) || this.birth.lon < -180 || this.birth.lon > 180) {
+      promptAction.showToast({ message: '出生地经度须在 -180~180 之间（东经为正）' })
+      return
+    }
+    await birthStore.save(this.birth)
+    router.pushUrl({ url: 'pages/Result' })
+  }
+
   build() {
     Column() {
       Scroll() {
         Column({ space: 14 }) {
-          // 标题
           Column({ space: 4 }) {
             Text('今 日 运 势')
               .fontSize(24).fontWeight(FontWeight.Bold).fontColor(Theme.GOLD)
@@ -94,45 +81,32 @@ struct Index {
           .alignItems(HorizontalAlign.Start)
           .margin({ bottom: 4 })
 
-          if (this.chart !== null && this.fortune !== null) {
-            TodayCard({
-              fortune: this.fortune as Fortune,
-              chart: this.chart as Chart,
-              todayText: this.todayText()
-            })
-            ChartCard({ chart: this.chart as Chart })
-            YunCard({
-              chart: this.chart as Chart,
-              years: this.years,
-              currentYear: beijingNow().y
-            })
-
-            if (!this.editing) {
-              Button('修改生辰')
-                .width('100%')
-                .height(40)
-                .fontSize(14)
-                .fontColor(Theme.GOLD)
-                .backgroundColor(Theme.CARD)
-                .borderRadius(10)
-                .border({ width: 1, color: Theme.LINE })
-                .onClick(() => { this.editing = true })
-            }
-          }
-
-          if (this.chart === null || this.editing) {
+          if (this.loaded) {
             InputCard({
               birth: this.birth,
               onChange: (b: BirthInput) => { this.onBirthChange(b) }
             })
-            Button('排 盘')
+          }
+
+          Button('排 盘')
+            .width('100%')
+            .height(46)
+            .fontSize(17)
+            .fontColor('#FFFFFF')
+            .backgroundColor(Theme.RED)
+            .borderRadius(10)
+            .onClick(() => { this.compute() })
+
+          if (this.hasSaved) {
+            Button('查看上次结果')
               .width('100%')
-              .height(44)
-              .fontSize(16)
-              .fontColor('#FFFFFF')
-              .backgroundColor(Theme.RED)
+              .height(42)
+              .fontSize(14)
+              .fontColor(Theme.GOLD)
+              .backgroundColor(Theme.CARD)
               .borderRadius(10)
-              .onClick(() => { this.compute() })
+              .border({ width: 1, color: Theme.LINE })
+              .onClick(() => { router.pushUrl({ url: 'pages/Result' }) })
           }
 
           Text('算法：太阳视黄经用截断 VSOP87 计算，节气时刻误差 < 2 分钟；日柱 23:00 换日，年柱以立春为界，月柱以十二节为界。运势评分属民俗算法，仅供娱乐参考。')
@@ -149,12 +123,5 @@ struct Index {
     .width('100%')
     .height('100%')
     .backgroundColor(Theme.BG)
-  }
-
-  private todayText(): string {
-    const spec = beijingNow()
-    const wd: string[] = ['日', '一', '二', '三', '四', '五', '六']
-    const dow: number = new Date(Date.now() + 8 * 3600 * 1000).getUTCDay()
-    return spec.y.toString() + '-' + pad2(spec.m) + '-' + pad2(spec.d) + ' 周' + wd[dow]
   }
 }

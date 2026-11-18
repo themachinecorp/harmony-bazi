@@ -1,0 +1,116 @@
+/**
+ * 结果页：今日概览 / 命盘四柱 / 大运流年 / 真太阳时；左上角返回可重新输入
+ */
+import { router } from '@kit.ArkUI'
+import { BirthInput, Chart, Fortune, YearItem, buildChart, dailyFortune, yearList, beijingNow, pad2 } from '../model/Bazi'
+import { birthStore } from '../store/BirthStore'
+import { TodayCard } from '../components/TodayCard'
+import { ChartCard } from '../components/ChartCard'
+import { YunCard } from '../components/YunCard'
+import { Theme } from '../model/Theme'
+
+@Entry
+@Component
+struct Result {
+  @State private chart: Chart | null = null
+  @State private fortune: Fortune | null = null
+  @State private years: YearItem[] = []
+  @State private summary: string = ''
+
+  aboutToAppear(): void {
+    this.load()
+  }
+
+  onPageShow(): void {
+    if (this.chart === null) {
+      this.load()
+    }
+  }
+
+  async load(): Promise<void> {
+    if (this.chart !== null) {
+      return
+    }
+    const o: BirthInput | null = await birthStore.load()
+    if (o === null) {
+      router.back()
+      return
+    }
+    const c: Chart = buildChart(o)
+    const spec = beijingNow()
+    const f: Fortune = dailyFortune(c, spec, o.lon, 8)
+    this.chart = c
+    this.fortune = f
+    this.years = yearList(c, spec.y - 2, spec.y + 5)
+    this.summary = o.y.toString() + '-' + pad2(o.m) + '-' + pad2(o.d) + ' ' + pad2(o.h) + ':' + pad2(o.mi) +
+      '　经度 ' + o.lon.toFixed(2) + '°E　真太阳时 ' + c.solar.trueStr.substring(0, 16)
+  }
+
+  private todayText(): string {
+    const spec = beijingNow()
+    const wd: string[] = ['日', '一', '二', '三', '四', '五', '六']
+    const dow: number = new Date(Date.now() + 8 * 3600 * 1000).getUTCDay()
+    return spec.y.toString() + '-' + pad2(spec.m) + '-' + pad2(spec.d) + ' 周' + wd[dow]
+  }
+
+  build() {
+    Column() {
+      // 顶栏：返回 + 标题 + 生辰摘要
+      Row({ space: 10 }) {
+        Text('‹')
+          .fontSize(26).fontColor(Theme.GOLD)
+          .width(28)
+          .onClick(() => { router.back() })
+        Column({ space: 2 }) {
+          Text('命盘总览').fontSize(19).fontWeight(FontWeight.Bold).fontColor(Theme.GOLD)
+          Text(this.summary).fontSize(11).fontColor(Theme.DIM).maxLines(1)
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+      }
+      .width('100%')
+      .padding({ left: 14, right: 14, top: 14, bottom: 6 })
+
+      if (this.chart !== null && this.fortune !== null) {
+        Scroll() {
+          Column({ space: 14 }) {
+            TodayCard({
+              fortune: this.fortune as Fortune,
+              chart: this.chart as Chart,
+              todayText: this.todayText()
+            })
+            ChartCard({ chart: this.chart as Chart })
+            YunCard({
+              chart: this.chart as Chart,
+              years: this.years,
+              currentYear: beijingNow().y
+            })
+
+            Button('返回修改生辰')
+              .width('100%')
+              .height(42)
+              .fontSize(14)
+              .fontColor(Theme.GOLD)
+              .backgroundColor(Theme.CARD)
+              .borderRadius(10)
+              .border({ width: 1, color: Theme.LINE })
+              .onClick(() => { router.back() })
+          }
+          .width('100%')
+          .padding({ left: 14, right: 14, top: 4, bottom: 30 })
+        }
+        .layoutWeight(1)
+        .scrollBar(BarState.Off)
+      } else {
+        Column({ space: 10 }) {
+          Text('正在读取生辰…').fontSize(14).fontColor(Theme.DIM)
+        }
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(Theme.BG)
+  }
+}
