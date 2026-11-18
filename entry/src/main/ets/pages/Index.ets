@@ -31,7 +31,12 @@ struct Index {
   }
 
   async restore(): Promise<void> {
-    const o: BirthInput | null = await birthStore.load()
+    // 优先用内存里的「最近一次查询」；没有（冷启动）才读存档。
+    // 这样无论页面是被重建还是被回填，显示的都是最新查询的那份。
+    let o: BirthInput | null = birthStore.getQueried()
+    if (o === null) {
+      o = await birthStore.load()
+    }
     if (o !== null) {
       const lonBad: boolean = !isFinite(o.lon) || o.lon < -180 || o.lon > 180
       this.birth = {
