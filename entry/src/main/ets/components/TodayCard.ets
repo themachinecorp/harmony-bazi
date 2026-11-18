@@ -34,6 +34,8 @@ export struct TodayCard {
         Text(this.fortune.today.year.name + ' ' + this.fortune.today.month.name + ' ' +
         this.fortune.today.day.name + ' ' + this.fortune.today.hour.name)
           .fontSize(20).fontColor(Theme.TEXT).fontWeight(FontWeight.Medium)
+        Text('↑ 今日干支（今天这一天的，不是你的命盘）')
+          .fontSize(10).fontColor(Theme.DIM)
         Text('干支纪年 ' + this.fortune.today.solarYear.toString() + ' 年　节令：' +
         this.fortune.today.jiePrev.name + ' 后 · ' + this.fortune.today.jieNext.name + ' 前')
           .fontSize(12).fontColor(Theme.DIM)

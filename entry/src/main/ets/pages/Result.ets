@@ -74,12 +74,13 @@ struct Result {
       if (this.chart !== null && this.fortune !== null) {
         Scroll() {
           Column({ space: 14 }) {
+            // 命盘在前：先看自己的八字，再看今天运势（避免把「今日干支」当成命盘）
+            ChartCard({ chart: this.chart as Chart })
             TodayCard({
               fortune: this.fortune as Fortune,
               chart: this.chart as Chart,
               todayText: this.todayText()
             })
-            ChartCard({ chart: this.chart as Chart })
             YunCard({
               chart: this.chart as Chart,
               years: this.years,
