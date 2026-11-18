@@ -58,8 +58,13 @@ struct Index {
     birthStore.setDraft(b)
   }
 
-  /** 从结果页返回：表单回填「最近一次查询」的信息 */
+  /** 从结果页返回：表单回填「最近一次查询」的信息。
+   *  必须靠 store 的返回标记判断——日期/时间选择器关闭时也会触发 onPageShow，
+   *  那样回填会把用户刚选的值弹回旧值。 */
   onPageShow(): void {
+    if (!birthStore.consumeReturned()) {
+      return
+    }
     const q: BirthInput | null = birthStore.getQueried()
     if (q !== null) {
       this.birth = q

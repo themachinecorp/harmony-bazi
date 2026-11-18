@@ -56,6 +56,12 @@ struct Result {
       '　经度 ' + o.lon.toFixed(2) + '°E　真太阳时 ' + c.solar.trueStr.substring(0, 16)
   }
 
+  /** 返回录入页：先打标记，让录入页回填最近一次查询的信息 */
+  private goBack(): void {
+    birthStore.markReturned()
+    router.back()
+  }
+
   private todayText(): string {
     const spec = beijingNow()
     const wd: string[] = ['日', '一', '二', '三', '四', '五', '六']
@@ -70,7 +76,7 @@ struct Result {
         Text('‹')
           .fontSize(28).fontColor(Theme.GOLD)
           .width(26)
-          .onClick(() => { router.back() })
+          .onClick(() => { this.goBack() })
         Column({ space: 2 }) {
           Text('命盘总览').fontSize(19).fontWeight(FontWeight.Bold).fontColor(Theme.GOLD)
           Text(this.summary).fontSize(11).fontColor(Theme.DIM).maxLines(1)
@@ -106,7 +112,7 @@ struct Result {
               .backgroundColor(Theme.CARD)
               .borderRadius(14)
               .border({ width: 1, color: Theme.LINE })
-              .onClick(() => { router.back() })
+              .onClick(() => { this.goBack() })
           }
           .width('100%')
           .padding({ left: 14, right: 14, top: 4, bottom: 30 })

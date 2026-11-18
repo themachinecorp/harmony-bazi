@@ -24,6 +24,20 @@ export class BirthStore {
     this.draft = o
   }
 
+  /** 从结果页返回时打标记：只有这个标记存在时，录入页才回填表单。
+   *  （日期/时间选择器这类弹窗关闭也会触发 onPageShow，不能据此回填） */
+  private returned: boolean = false
+
+  markReturned(): void {
+    this.returned = true
+  }
+
+  consumeReturned(): boolean {
+    const r: boolean = this.returned
+    this.returned = false
+    return r
+  }
+
   getDraft(): BirthInput | null {
     return this.draft
   }
