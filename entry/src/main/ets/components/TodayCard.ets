@@ -80,13 +80,23 @@ export struct TodayCard {
         }
         .alignItems(HorizontalAlign.Start)
 
-        Progress({ value: this.shown, total: 100, type: ProgressType.Ring })
+        Stack({ alignContent: Alignment.Center }) {
+          // 扩散光环
+          Column()
+            .width(74).height(74)
+            .borderRadius(37)
+            .border({ width: 1.5, color: this.scoreColor() })
+            .scale({ x: this.pulse ? 1.55 : 1, y: this.pulse ? 1.55 : 1 })
+            .opacity(this.pulse ? 0 : 0.5)
+            .animation({ duration: 1800, curve: Curve.EaseOut, iterations: -1 })
+          Progress({ value: this.shown, total: 100, type: ProgressType.Ring })
           .width(74).height(74)
           .color(this.scoreColor())
           .style({ strokeWidth: 6 })
           .shadow({ radius: 14, color: this.scoreColor(), offsetY: 0 })
-          .opacity(this.pulse ? 1 : 0.55)
-          .animation({ duration: 1500, curve: Curve.EaseInOut, iterations: -1, playMode: PlayMode.Alternate })
+            .opacity(1)
+        }
+        .width(74).height(74)
 
         Column({ space: 5 }) {
           this.meta('大运', this.fortune.curYunName.length > 0 ?
@@ -100,7 +110,7 @@ export struct TodayCard {
       }
       .width('100%')
       .padding(14)
-      .backgroundColor(Theme.CARD2)
+      .linearGradient({ angle: 135, colors: [['#1C2130', 0], ['#12151D', 1]] })
       .borderRadius(Theme.R_SM)
       .border({ width: 1, color: Theme.LINE_SOFT })
 

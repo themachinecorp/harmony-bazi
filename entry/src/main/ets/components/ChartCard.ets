@@ -9,6 +9,12 @@ export struct ChartCard {
   @Prop chart: Chart
   /** 点柱子看藏干：-1 未选 */
   @State private sel: number = -1
+  /** 翻牌入场开关 */
+  @State private flipped: boolean = false
+
+  aboutToAppear(): void {
+    setTimeout(() => { this.flipped = true }, 60)
+  }
 
   private pillars(): Pillar[] {
     return [this.chart.year, this.chart.month, this.chart.day, this.chart.hour]
@@ -62,7 +68,17 @@ export struct ChartCard {
             width: this.sel === idx ? 1.6 : 1,
             color: this.sel === idx ? Theme.GOLD : (idx === 2 ? Theme.RED_SOFT : Theme.LINE_SOFT)
           })
-          .scale({ x: this.sel === idx ? 1.05 : 1, y: this.sel === idx ? 1.05 : 1 })
+          .scale({ x: this.sel === idx ? 1.06 : 1, y: this.sel === idx ? 1.06 : 1 })
+          .rotate({
+            angle: this.flipped ? 0 : 92,
+            x: 0,
+            y: 1,
+            z: 0,
+            centerX: '50%',
+            centerY: '50%',
+            perspective: 600
+          })
+          .opacity(this.flipped ? 1 : 0)
           .shadow({
             radius: this.sel === idx ? 16 : 0,
             color: '#66D9B36C',

@@ -17,8 +17,11 @@ struct Result {
   @State private summary: string = ''
   /** 入场动画开关 */
   @State private entered: boolean = false
+  /** 背景光斑漂移开关 */
+  @State private glow: boolean = false
 
   aboutToAppear(): void {
+    setTimeout(() => { this.glow = true }, 120)
     this.load()
   }
 
@@ -78,7 +81,24 @@ struct Result {
   }
 
   build() {
-    Column() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      // 背景光斑（大半径模糊，缓慢往复漂移）
+      Column()
+        .width(280).height(280).borderRadius(140)
+        .backgroundColor('#26D9B36C')
+        .blur(80)
+        .translate({ x: this.glow ? -60 : -110, y: this.glow ? -40 : -90 })
+        .opacity(this.glow ? 0.9 : 0.5)
+        .animation({ duration: 5600, curve: Curve.EaseInOut, iterations: -1, playMode: PlayMode.Alternate })
+      Column()
+        .width(240).height(240).borderRadius(120)
+        .backgroundColor('#1FC2410C')
+        .blur(90)
+        .translate({ x: this.glow ? 210 : 260, y: this.glow ? 470 : 520 })
+        .opacity(this.glow ? 0.7 : 0.35)
+        .animation({ duration: 6800, curve: Curve.EaseInOut, iterations: -1, playMode: PlayMode.Alternate })
+
+      Column() {
       // 顶栏：返回 + 标题 + 生辰摘要
       Row({ space: 10 }) {
         Text('‹')
@@ -154,6 +174,9 @@ struct Result {
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
       }
+    }
+      .width('100%')
+      .height('100%')
     }
     .width('100%')
     .height('100%')

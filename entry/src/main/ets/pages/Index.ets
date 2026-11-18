@@ -21,6 +21,7 @@ struct Index {
   @State private hasSaved: boolean = false
   @State private loaded: boolean = false
   @State private entered: boolean = false
+  @State private pressed: boolean = false
 
   aboutToAppear(): void {
     this.restore()
@@ -126,7 +127,16 @@ struct Index {
             .fontColor('#FFF6E8')
             .linearGradient({ angle: 90, colors: Theme.RED_GRADIENT })
             .borderRadius(14)
-            .shadow({ radius: 18, color: '#33C2410C', offsetY: 6 })
+            .shadow({ radius: this.pressed ? 8 : 18, color: '#33C2410C', offsetY: this.pressed ? 2 : 6 })
+            .scale({ x: this.pressed ? 0.96 : 1, y: this.pressed ? 0.96 : 1 })
+            .animation({ duration: 130, curve: Curve.EaseOut })
+            .onTouch((e: TouchEvent) => {
+              if (e.type === TouchType.Down) {
+                this.pressed = true
+              } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+                this.pressed = false
+              }
+            })
             .opacity(this.entered ? 1 : 0)
             .translate({ y: this.entered ? 0 : 18 })
             .animation({ duration: 420, curve: Curve.EaseOut, delay: 120 })
