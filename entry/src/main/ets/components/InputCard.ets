@@ -20,7 +20,8 @@ interface BirthPatch {
 
 @Component
 export struct InputCard {
-  @Prop birth: BirthInput
+  /** 生辰用 JSON 字符串传入：字符串是原始类型，父组件一改就会同步，不受 @Prop 深拷贝语义影响 */
+  @Prop birthJson: string
   @State private lonWarn: string = ''
   onChange: (b: BirthInput) => void = (b: BirthInput): void => {}
 
@@ -30,14 +31,19 @@ export struct InputCard {
   private rawLon: string = ''
 
   aboutToAppear(): void {
-    this.lonInit = this.birth.lon.toFixed(2)
+    this.lonInit = this.cur().lon.toFixed(2)
     this.rawLon = this.lonInit
+  }
+
+  /** 当前表单值（由 JSON prop 解析而来，始终与父组件一致） */
+  private cur(): BirthInput {
+    return JSON.parse(this.birthJson) as BirthInput
   }
 
   private commitLon(): void {
     const v: number = parseFloat(this.rawLon)
     if (isNaN(v)) {
-      this.lonWarn = '经度无法识别，仍用 ' + this.birth.lon.toFixed(2) + '°E'
+      this.lonWarn = '经度无法识别，仍用 ' + this.cur().lon.toFixed(2) + '°E'
       return
     }
     if (v < -180 || v > 180) {
@@ -45,31 +51,31 @@ export struct InputCard {
       return
     }
     this.lonWarn = ''
-    if (Math.abs(v - this.birth.lon) > 0.0001) {
+    if (Math.abs(v - this.cur().lon) > 0.0001) {
       this.patch({ lon: v })
     }
   }
 
   private cityIdx(): number {
-    if (this.birth.cityIdx !== undefined) {
-      return this.birth.cityIdx
+    if (this.cur().cityIdx !== undefined) {
+      return this.cur().cityIdx
     }
     return 0
   }
 
   private patch(changed: BirthPatch): void {
     const b: BirthInput = {
-      y: this.birth.y,
-      m: this.birth.m,
-      d: this.birth.d,
-      h: this.birth.h,
-      mi: this.birth.mi,
-      lon: this.birth.lon,
-      tz: this.birth.tz,
-      gender: this.birth.gender,
-      dst: this.birth.dst,
-      unknownHour: this.birth.unknownHour,
-      cityIdx: this.birth.cityIdx
+      y: this.cur().y,
+      m: this.cur().m,
+      d: this.cur().d,
+      h: this.cur().h,
+      mi: this.cur().mi,
+      lon: this.cur().lon,
+      tz: src.tz,
+      gender: this.cur().gender,
+      dst: this.cur().dst,
+      unknownHour: this.cur().unknownHour,
+      cityIdx: this.cur().cityIdx
     }
     if (changed.y !== undefined) { b.y = changed.y }
     if (changed.m !== undefined) { b.m = changed.m }
@@ -88,7 +94,7 @@ export struct InputCard {
     DatePickerDialog.show({
       start: new Date(1900, 0, 1),
       end: new Date(2100, 11, 31),
-      selected: new Date(this.birth.y, this.birth.m - 1, this.birth.d),
+      selected: new Date(this.cur().y, this.cur().m - 1, this.cur().d),
       onDateAccept: (value: Date) => {
         this.patch({ y: value.getFullYear(), m: value.getMonth() + 1, d: value.getDate() })
       }
@@ -97,7 +103,7 @@ export struct InputCard {
 
   private pickTime(): void {
     TimePickerDialog.show({
-      selected: new Date(2020, 0, 1, this.birth.h, this.birth.mi),
+      selected: new Date(2020, 0, 1, this.cur().h, this.cur().mi),
       useMilitaryTime: true,
       onAccept: (value: TimePickerResult) => {
         this.patch({ h: value.hour, mi: value.minute })
@@ -132,9 +138,9 @@ export struct InputCard {
       // 日期 / 时间：按钮式输入行
       Row({ space: 10 }) {
         this.pickBox('出生日期',
-          this.birth.y.toString() + '-' + pad2(this.birth.m) + '-' + pad2(this.birth.d),
+          this.cur().y.toString() + '-' + pad2(this.cur().m) + '-' + pad2(this.cur().d),
           () => { this.pickDate() })
-        this.pickBox('出生时间', pad2(this.birth.h) + ':' + pad2(this.birth.mi),
+        this.pickBox('出生时间', pad2(this.cur().h) + ':' + pad2(this.cur().mi),
           () => { this.pickTime() })
       }
       .width('100%')
@@ -189,9 +195,9 @@ export struct InputCard {
 
       // 开关
       Column({ space: 0 }) {
-        this.switchRow('出生时为夏令时（+1 小时）', '中国 1986–1991 年实行', this.birth.dst,
+        this.switchRow('出生时为夏令时（+1 小时）', '中国 1986–1991 年实行', this.cur().dst,
           (v: boolean) => { this.patch({ dst: v }) })
-        this.switchRow('时辰未知', '未知则不排时柱', this.birth.unknownHour,
+        this.switchRow('时辰未知', '未知则不排时柱', this.cur().unknownHour,
           (v: boolean) => { this.patch({ unknownHour: v }) })
       }
       .width('100%')
@@ -207,13 +213,13 @@ export struct InputCard {
   sex(label: string, value: string) {
     Text(label)
       .fontSize(14)
-      .fontColor(this.birth.gender === value ? '#1A1206' : Theme.TEXT2)
+      .fontColor(this.cur().gender === value ? '#1A1206' : Theme.TEXT2)
       .width(76)
       .height(36)
       .textAlign(TextAlign.Center)
-      .backgroundColor(this.birth.gender === value ? Theme.GOLD : Theme.CARD2)
+      .backgroundColor(this.cur().gender === value ? Theme.GOLD : Theme.CARD2)
       .borderRadius(Theme.R_PILL)
-      .border({ width: 1, color: this.birth.gender === value ? Theme.GOLD : Theme.LINE_SOFT })
+      .border({ width: 1, color: this.cur().gender === value ? Theme.GOLD : Theme.LINE_SOFT })
       .onClick(() => { this.patch({ gender: value }) })
   }
 

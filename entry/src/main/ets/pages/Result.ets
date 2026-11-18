@@ -31,7 +31,6 @@ struct Result {
     this.fortune = null
     this.years = []
     this.summary = ''
-    birthStore.takePending()
   }
 
   async load(): Promise<void> {
@@ -39,7 +38,7 @@ struct Result {
     this.chart = null
     this.fortune = null
     this.years = []
-    let o: BirthInput | null = birthStore.takePending()
+    let o: BirthInput | null = birthStore.getQueried()
     if (o === null) {
       o = await birthStore.load()
     }

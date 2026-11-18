@@ -7,17 +7,25 @@ import { BirthInput } from '../model/Bazi'
 
 export class BirthStore {
   private prefs: preferences.Preferences | undefined = undefined
-  /** 内存态：录入页 → 结果页直接传递，避免依赖落盘时序造成读到旧值 */
-  private pending: BirthInput | null = null
+  /** 最近一次【已查询】的生辰：表单回填与结果页都读它（不消费，可反复读） */
+  private queried: BirthInput | null = null
+  /** 表单当前草稿 */
+  private draft: BirthInput | null = null
 
-  setPending(o: BirthInput): void {
-    this.pending = o
+  setQueried(o: BirthInput): void {
+    this.queried = o
   }
 
-  takePending(): BirthInput | null {
-    const o: BirthInput | null = this.pending
-    this.pending = null
-    return o
+  getQueried(): BirthInput | null {
+    return this.queried
+  }
+
+  setDraft(o: BirthInput): void {
+    this.draft = o
+  }
+
+  getDraft(): BirthInput | null {
+    return this.draft
   }
 
   async init(context: common.UIAbilityContext): Promise<void> {

@@ -2,7 +2,7 @@
  * 生辰录入页：填信息 → 排盘 → 跳转结果页
  */
 import { router, promptAction } from '@kit.ArkUI'
-import { BirthInput, CITIES, City } from '../model/Bazi'
+import { BirthInput, CITIES, City, pad2 } from '../model/Bazi'
 import { birthStore } from '../store/BirthStore'
 import { InputCard } from '../components/InputCard'
 import { Theme } from '../model/Theme'
@@ -48,12 +48,23 @@ struct Index {
         cityIdx: lonBad ? 0 : (o.cityIdx === undefined ? 0 : o.cityIdx)
       }
       this.hasSaved = true
+      birthStore.setDraft(this.birth)
     }
     this.loaded = true
   }
 
   onBirthChange(b: BirthInput): void {
     this.birth = b
+    birthStore.setDraft(b)
+  }
+
+  /** 从结果页返回：表单回填「最近一次查询」的信息 */
+  onPageShow(): void {
+    const q: BirthInput | null = birthStore.getQueried()
+    if (q !== null) {
+      this.birth = q
+      birthStore.setDraft(q)
+    }
   }
 
   async compute(): Promise<void> {
@@ -62,9 +73,18 @@ struct Index {
       promptAction.showToast({ message: '出生地经度须在 -180~180 之间（东经为正）' })
       return
     }
-    birthStore.setPending(this.birth)
+    // 记住「最近一次查询」：返回时表单据此回填，结果页也读它
+    birthStore.setQueried(this.birth)
+    birthStore.setDraft(this.birth)
     await birthStore.save(this.birth)
     router.pushUrl({ url: 'pages/Result' })
+  }
+
+  private formSummary(): string {
+    const idx: number = this.birth.cityIdx === undefined ? -1 : this.birth.cityIdx
+    const city: string = (idx >= 0 && idx < CITIES.length) ? CITIES[idx].name : '自定义经度'
+    return '表单当前：' + this.birth.y.toString() + '-' + pad2(this.birth.m) + '-' + pad2(this.birth.d) +
+      ' ' + pad2(this.birth.h) + ':' + pad2(this.birth.mi) + '　' + city + ' ' + this.birth.lon.toFixed(2) + '°E'
   }
 
   build() {
@@ -87,7 +107,7 @@ struct Index {
 
           if (this.loaded) {
             InputCard({
-              birth: this.birth,
+              birthJson: JSON.stringify(this.birth),
               onChange: (b: BirthInput) => { this.onBirthChange(b) }
             })
           }
@@ -102,6 +122,10 @@ struct Index {
             .borderRadius(14)
             .shadow({ radius: 18, color: '#33C2410C', offsetY: 6 })
             .onClick(() => { this.compute() })
+
+          Text(this.formSummary())
+            .fontSize(11).fontColor(Theme.DIM)
+            .width('100%')
 
           if (this.hasSaved) {
             Button('查看上次结果')
