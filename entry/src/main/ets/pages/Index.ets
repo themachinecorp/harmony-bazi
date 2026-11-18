@@ -69,7 +69,7 @@ struct Index {
   async compute(): Promise<void> {
     // 提交前校验格式（日期 1994-06-14 / 时间 14:30 / 经度 -180~180）
     if (formToBirth(this.form) === null) {
-      this.getUIContext().getPromptAction().showToast({ message: '请检查日期(1994-06-14)、时间(14:30)、经度格式' })
+      this.getUIContext().getPromptAction().showToast({ message: '出生地经度格式不对（应为 106.55 这类小数）' })
       return
     }
     // 记住「最近一次查询」：返回时表单据此回填，结果页也读它

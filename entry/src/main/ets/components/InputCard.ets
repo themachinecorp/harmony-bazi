@@ -145,7 +145,7 @@ export struct InputCard {
       Column({ space: 8 }) {
         Text('出生地经度（东经为正）').fontSize(12).fontColor(Theme.DIM)
         TextInput({ text: this.lonStr })
-          .type(InputType.Number)
+          .type(InputType.Normal)
           .fontSize(15).fontColor(Theme.TEXT)
           .backgroundColor(Theme.CARD2)
           .borderRadius(Theme.R_SM)
@@ -199,21 +199,17 @@ export struct InputCard {
   @Builder
   dateBox(label: string, value: string, pick: () => void) {
     Column({ space: 6 }) {
-      Row({ space: 6 }) {
-        Text(label).fontSize(12).fontColor(Theme.DIM).layoutWeight(1)
-        Text('选择').fontSize(11).fontColor(Theme.GOLD).onClick(() => { pick() })
+      Text(label).fontSize(12).fontColor(Theme.DIM)
+      Row({ space: 8 }) {
+        Text(value).fontSize(16).fontColor(Theme.TEXT).layoutWeight(1)
+        Text('选择').fontSize(11).fontColor(Theme.GOLD)
       }
       .width('100%')
-      TextInput({ text: value })
-        .fontSize(15).fontColor(Theme.TEXT)
-        .backgroundColor(Theme.CARD2)
-        .borderRadius(Theme.R_SM)
-        .onChange((v: string) => {
-          if (v === this.dateStr) {
-            return
-          }
-          this.emit(v, this.timeStr, this.lonStr, this.gender, this.dst, this.unknownHour, this.cityIdx)
-        })
+      .padding({ left: 12, right: 12, top: 11, bottom: 11 })
+      .backgroundColor(Theme.CARD2)
+      .borderRadius(Theme.R_SM)
+      .border({ width: 1, color: Theme.LINE_SOFT })
+      .onClick(() => { pick() })
     }
     .layoutWeight(1)
     .alignItems(HorizontalAlign.Start)
@@ -222,21 +218,17 @@ export struct InputCard {
   @Builder
   timeBox(label: string, value: string, pick: () => void) {
     Column({ space: 6 }) {
-      Row({ space: 6 }) {
-        Text(label).fontSize(12).fontColor(Theme.DIM).layoutWeight(1)
-        Text('选择').fontSize(11).fontColor(Theme.GOLD).onClick(() => { pick() })
+      Text(label).fontSize(12).fontColor(Theme.DIM)
+      Row({ space: 8 }) {
+        Text(value).fontSize(16).fontColor(Theme.TEXT).layoutWeight(1)
+        Text('选择').fontSize(11).fontColor(Theme.GOLD)
       }
       .width('100%')
-      TextInput({ text: value })
-        .fontSize(15).fontColor(Theme.TEXT)
-        .backgroundColor(Theme.CARD2)
-        .borderRadius(Theme.R_SM)
-        .onChange((v: string) => {
-          if (v === this.timeStr) {
-            return
-          }
-          this.emit(this.dateStr, v, this.lonStr, this.gender, this.dst, this.unknownHour, this.cityIdx)
-        })
+      .padding({ left: 12, right: 12, top: 11, bottom: 11 })
+      .backgroundColor(Theme.CARD2)
+      .borderRadius(Theme.R_SM)
+      .border({ width: 1, color: Theme.LINE_SOFT })
+      .onClick(() => { pick() })
     }
     .layoutWeight(1)
     .alignItems(HorizontalAlign.Start)
