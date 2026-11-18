@@ -148,7 +148,6 @@ export struct InputCard {
             .value(CITIES[this.cityIdx()].name)
             .menuBackgroundColor(Theme.CARD)
             .fontColor(Theme.TEXT)
-            .fontSize(15)
             .backgroundColor(Theme.CARD2)
             .layoutWeight(1)
             .onSelect((index: number) => {
