@@ -37,15 +37,15 @@ struct Result {
     this.chart = null
     this.fortune = null
     this.years = []
-    let f: FormData | null = birthStore.getQueried()
-    if (f === null) {
-      f = await birthStore.load()
+    let fd: FormData | null = birthStore.getQueried()
+    if (fd === null) {
+      fd = await birthStore.load()
     }
-    if (f === null) {
+    if (fd === null) {
       this.getUIContext().getRouter().back()
       return
     }
-    const parsed = formToBirth(f)
+    const parsed: BirthInput | null = formToBirth(fd)
     if (parsed === null) {
       this.getUIContext().getRouter().back()
       return
@@ -53,11 +53,11 @@ struct Result {
     const o: BirthInput = parsed
     const c: Chart = buildChart(o)
     const spec = beijingNow()
-    const f: Fortune = dailyFortune(c, spec, o.lon, 8)
+    const ft: Fortune = dailyFortune(c, spec, o.lon, 8)
     this.chart = c
-    this.fortune = f
+    this.fortune = ft
     this.years = yearList(c, spec.y - 2, spec.y + 5)
-    this.summary = f.dateStr + ' ' + f.timeStr + '　经度 ' + f.lonStr + '°E　真太阳时 ' +
+    this.summary = fd.dateStr + ' ' + fd.timeStr + '　经度 ' + fd.lonStr + '°E　真太阳时 ' +
       c.solar.trueStr.substring(0, 16)
   }
 
