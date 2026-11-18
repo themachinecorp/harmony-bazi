@@ -47,7 +47,7 @@ export struct InputCard {
         y = py; m = pm; d = pd
       }
     }
-    DatePickerDialog.show({
+    this.getUIContext().showDatePickerDialog({
       start: new Date(1900, 0, 1),
       end: new Date(2100, 11, 31),
       selected: new Date(y, m - 1, d),
@@ -69,7 +69,7 @@ export struct InputCard {
         h = ph; mi = pm
       }
     }
-    TimePickerDialog.show({
+    this.getUIContext().showTimePickerDialog({
       selected: new Date(2020, 0, 1, h, mi),
       useMilitaryTime: true,
       onAccept: (value: TimePickerResult) => {
