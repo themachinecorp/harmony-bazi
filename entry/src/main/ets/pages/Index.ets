@@ -52,18 +52,11 @@ struct Index {
     birthStore.setDraft(f)
   }
 
-  /** 从结果页返回：表单回填「最近一次查询」的信息。
-   *  必须靠 store 的返回标记判断——日期/时间选择器关闭时也会触发 onPageShow，
-   *  那样回填会把用户刚选的值弹回旧值。 */
+  /** 从结果页返回：不再回填表单。
+   *  录入卡自己持有表单值，回填会造成「界面显示」与「查询所用状态」不一致；
+   *  而返回时表单本来就是上次查询的那份，无需干预。 */
   onPageShow(): void {
-    if (!birthStore.consumeReturned()) {
-      return
-    }
-    const q: FormData | null = birthStore.getQueried()
-    if (q !== null) {
-      this.form = q
-      birthStore.setDraft(q)
-    }
+    birthStore.consumeReturned()
   }
 
   async compute(): Promise<void> {
@@ -106,13 +99,13 @@ struct Index {
 
           if (this.loaded) {
             InputCard({
-              dateStr: this.form.dateStr,
-              timeStr: this.form.timeStr,
-              lonStr: this.form.lonStr,
-              gender: this.form.gender,
-              dst: this.form.dst,
-              unknownHour: this.form.unknownHour,
-              cityIdx: this.form.cityIdx,
+              initDate: this.form.dateStr,
+              initTime: this.form.timeStr,
+              initLon: this.form.lonStr,
+              initGender: this.form.gender,
+              initDst: this.form.dst,
+              initUnknownHour: this.form.unknownHour,
+              initCityIdx: this.form.cityIdx,
               onChange: (f: FormData) => { this.onFormChange(f) }
             })
           }
