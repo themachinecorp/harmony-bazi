@@ -124,12 +124,12 @@ export struct InputCard {
     Column({ space: 14 }) {
       // 性别
       Column({ space: 8 }) {
-        Text('性别').fontSize(12).fontColor(Theme.DIM)
+        Text('性别').fontSize(10).fontColor(Theme.DIM).fontFamily(Theme.MONO).fontFamily(Theme.MONO)
         Row({ space: 8 }) {
           this.sex('男', 'm')
           this.sex('女', 'f')
           Blank()
-          Text('决定大运顺逆').fontSize(11).fontColor(Theme.DIM)
+          Text('决定大运顺逆').fontSize(10).fontColor(Theme.DIM).fontFamily(Theme.MONO)
         }
         .width('100%')
       }
@@ -145,7 +145,7 @@ export struct InputCard {
 
       // 出生地
       Column({ space: 8 }) {
-        Text('出生地点').fontSize(12).fontColor(Theme.DIM)
+        Text('出生地点').fontSize(10).fontColor(Theme.DIM).fontFamily(Theme.MONO).fontFamily(Theme.MONO)
         Row() {
           Select(this.cityOptions())
             .selected(this.cityIdx)
@@ -174,17 +174,17 @@ export struct InputCard {
 
       // 经度
       Column({ space: 8 }) {
-        Text('出生地经度（东经为正）').fontSize(12).fontColor(Theme.DIM)
+        Text('出生地经度（东经为正）').fontSize(10).fontColor(Theme.DIM).fontFamily(Theme.MONO).fontFamily(Theme.MONO)
         TextInput({ text: this.lonStr })
           .type(InputType.Normal)
-          .fontSize(15).fontColor(Theme.TEXT)
+          .fontSize(15).fontColor(Theme.TEXT).fontFamily(Theme.MONO)
           .backgroundColor(Theme.CARD2)
           .borderRadius(Theme.R_SM)
           .onChange((v: string) => {
             this.lonStr = v
             this.emitAll(this.dateStr, this.timeStr, v, this.gender, this.dst, this.unknownHour, this.cityIdx)
           })
-        Text('用于换算真太阳时，直接决定时柱与月柱边界').fontSize(11).fontColor(Theme.DIM)
+        Text('用于换算真太阳时，直接决定时柱与月柱边界').fontSize(10).fontColor(Theme.DIM).fontFamily(Theme.MONO)
       }
       .width('100%')
       .alignItems(HorizontalAlign.Start)
@@ -215,13 +215,14 @@ export struct InputCard {
   sex(label: string, value: string) {
     Text(label)
       .fontSize(14)
-      .fontColor(this.gender === value ? '#1A1206' : Theme.TEXT2)
+      .fontFamily(Theme.MONO)
+      .fontColor(this.gender === value ? '#001208' : Theme.TEXT2)
       .width(76)
       .height(36)
       .textAlign(TextAlign.Center)
-      .backgroundColor(this.gender === value ? Theme.GOLD : Theme.CARD2)
+      .backgroundColor(this.gender === value ? Theme.GREEN : Theme.CARD2)
       .borderRadius(Theme.R_PILL)
-      .border({ width: 1, color: this.gender === value ? Theme.GOLD : Theme.LINE_SOFT })
+      .border({ width: 1, color: this.gender === value ? Theme.GREEN : Theme.LINE_SOFT })
       .onClick(() => {
         this.gender = value
         this.emitAll(this.dateStr, this.timeStr, this.lonStr, value, this.dst, this.unknownHour, this.cityIdx)
@@ -232,13 +233,13 @@ export struct InputCard {
   dateBox() {
     Column({ space: 6 }) {
       Row({ space: 6 }) {
-        Text('出生日期').fontSize(12).fontColor(Theme.DIM).layoutWeight(1)
-        Text('选择').fontSize(11).fontColor(Theme.GOLD).onClick(() => { this.pickDate() })
+        Text('出生日期').fontSize(10).fontColor(Theme.DIM).fontFamily(Theme.MONO).fontFamily(Theme.MONO).layoutWeight(1)
+        Text('PICK').fontSize(10).fontColor(Theme.CYAN).fontFamily(Theme.MONO).onClick(() => { this.pickDate() })
       }
       .width('100%')
       TextInput({ text: this.dateStr })
         .type(InputType.Normal)
-        .fontSize(15).fontColor(Theme.TEXT)
+        .fontSize(15).fontColor(Theme.TEXT).fontFamily(Theme.MONO)
         .backgroundColor(Theme.CARD2)
         .borderRadius(Theme.R_SM)
         .onChange((v: string) => {
@@ -254,13 +255,13 @@ export struct InputCard {
   timeBox() {
     Column({ space: 6 }) {
       Row({ space: 6 }) {
-        Text('出生时间').fontSize(12).fontColor(Theme.DIM).layoutWeight(1)
-        Text('选择').fontSize(11).fontColor(Theme.GOLD).onClick(() => { this.pickTime() })
+        Text('出生时间').fontSize(10).fontColor(Theme.DIM).fontFamily(Theme.MONO).fontFamily(Theme.MONO).layoutWeight(1)
+        Text('PICK').fontSize(10).fontColor(Theme.CYAN).fontFamily(Theme.MONO).onClick(() => { this.pickTime() })
       }
       .width('100%')
       TextInput({ text: this.timeStr })
         .type(InputType.Normal)
-        .fontSize(15).fontColor(Theme.TEXT)
+        .fontSize(15).fontColor(Theme.TEXT).fontFamily(Theme.MONO)
         .backgroundColor(Theme.CARD2)
         .borderRadius(Theme.R_SM)
         .onChange((v: string) => {
@@ -276,13 +277,13 @@ export struct InputCard {
   switchRow(title: string, sub: string, on: boolean, cb: (v: boolean) => void) {
     Row({ space: 10 }) {
       Column({ space: 2 }) {
-        Text(title).fontSize(13).fontColor(Theme.TEXT)
-        Text(sub).fontSize(11).fontColor(Theme.DIM)
+        Text(title).fontSize(12).fontColor(Theme.TEXT).fontFamily(Theme.MONO)
+        Text(sub).fontSize(10).fontColor(Theme.DIM).fontFamily(Theme.MONO)
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
       Toggle({ type: ToggleType.Switch, isOn: on })
-        .selectedColor(Theme.RED)
+        .selectedColor(Theme.GREEN)
         .onChange((v: boolean) => { cb(v) })
     }
     .width('100%')

@@ -1,8 +1,9 @@
 /**
- * 今日运势卡：环形评分 + 宜忌双列 + 逐条解读
+ * 今日运势（终端风）：ASCII 进度条 + 数据读数 + 宜忌 + 解读
  */
 import { Chart, Fortune } from '../model/Bazi'
 import { Theme } from '../model/Theme'
+import { TermPanel } from './TermPanel'
 
 @Component
 export struct TodayCard {
@@ -10,35 +11,46 @@ export struct TodayCard {
   @Prop chart: Chart
   @Prop todayText: string
 
-  /** 分数从 0 涨到目标值（配合环形进度一起动） */
   @State private shown: number = 0
-  @State private pulse: boolean = false
+  @State private blink: boolean = false
 
   aboutToAppear(): void {
     const target: number = this.fortune.score
-    const steps: number = 18
+    const steps: number = 20
     let i: number = 0
     const tick: () => void = (): void => {
       i += 1
       this.shown = target * i / steps
       if (i < steps) {
-        setTimeout(tick, 26)
+        setTimeout(tick, 24)
       } else {
         this.shown = target
       }
     }
-    setTimeout(tick, 120)
-    setTimeout(() => { this.pulse = true }, 200)
+    setTimeout(tick, 100)
+    const bl: () => void = (): void => {
+      this.blink = !this.blink
+      setTimeout(bl, 520)
+    }
+    setTimeout(bl, 400)
   }
 
   private scoreColor(): string {
     if (this.fortune.score >= 72) {
-      return Theme.OK
+      return Theme.GREEN
     }
     if (this.fortune.score >= 58) {
-      return Theme.GOLD
+      return Theme.AMBER
     }
-    return Theme.BAD
+    return Theme.RED
+  }
+
+  /** ASCII 进度条：[████████░░░░] */
+  private bar(): string {
+    const n: number = Math.round(this.shown / 5)
+    const full: string = '█'.repeat(n)
+    const empty: string = '░'.repeat(20 - n)
+    return '[' + full + empty + ']'
   }
 
   private pillars(): string[] {
@@ -48,99 +60,78 @@ export struct TodayCard {
   }
 
   build() {
-    Column({ space: 16 }) {
-      // 标题行
-      Row({ space: 8 }) {
-        Text('今日运势').fontSize(15).fontWeight(FontWeight.Bold).fontColor(Theme.TEXT)
-        Blank()
-        Text(this.todayText).fontSize(11).fontColor(Theme.DIM)
+    TermPanel({
+      title: '01 / 今日运势 TODAY',
+      status: this.todayText,
+      content: () => {
+        this.body()
       }
-      .width('100%')
+    })
+  }
 
+  @Builder
+  private body() {
+    Column({ space: 12 }) {
       // 今日干支
-      Column({ space: 4 }) {
-        Row({ space: 10 }) {
-          ForEach(this.pillars(), (s: string) => {
-            Text(s).fontSize(19).fontWeight(FontWeight.Medium).fontColor(Theme.TEXT)
-          }, (s: string) => s)
-        }
-        Text('今日干支（今天这一天的，不是你的命盘）')
-          .fontSize(10).fontColor(Theme.DIM)
+      Row({ space: 10 }) {
+        ForEach(this.pillars(), (s: string) => {
+          Text(s)
+            .fontSize(20).fontWeight(FontWeight.Bold).fontColor(Theme.GREEN)
+            .fontFamily(Theme.MONO)
+            .textShadow({ radius: 12, color: '#6600FF9C', offsetX: 0, offsetY: 0 })
+        }, (s: string) => s)
       }
       .width('100%')
-      .alignItems(HorizontalAlign.Start)
+      Text('> 今日干支 GANZHI_TODAY')
+        .fontSize(10).fontColor(Theme.DIM).fontFamily(Theme.MONO)
 
-      // 评分块：大数字 + 环形进度 + 元信息
-      Row({ space: 16 }) {
-        Column({ space: 2 }) {
-          Text(Math.round(this.shown).toString())
-            .fontSize(56).fontWeight(FontWeight.Bold).fontColor(this.scoreColor())
-            .textShadow({ radius: 24, color: this.scoreColor(), offsetX: 0, offsetY: 0 })
-          Text(this.fortune.label)
-            .fontSize(15).fontColor(this.scoreColor()).fontWeight(FontWeight.Medium)
-            .letterSpacing(2)
+      // 评分
+      Row({ space: 8 }) {
+        Text(this.bar())
+          .fontSize(16).fontColor(this.scoreColor()).fontFamily(Theme.MONO)
+          .textShadow({ radius: 14, color: this.scoreColor(), offsetX: 0, offsetY: 0 })
+        Text(Math.round(this.shown).toString() + '/100')
+          .fontSize(16).fontWeight(FontWeight.Bold).fontColor(this.scoreColor()).fontFamily(Theme.MONO)
+        Text(this.fortune.label).fontSize(14).fontColor(this.scoreColor()).fontFamily(Theme.MONO)
+        if (this.blink) {
+          Text('▌').fontSize(13).fontColor(Theme.GREEN).fontFamily(Theme.MONO)
         }
-        .alignItems(HorizontalAlign.Start)
-
-        Stack({ alignContent: Alignment.Center }) {
-          // 扩散光环
-          Column()
-            .width(74).height(74)
-            .borderRadius(37)
-            .border({ width: 1.5, color: this.scoreColor() })
-            .scale({ x: this.pulse ? 1.55 : 1, y: this.pulse ? 1.55 : 1 })
-            .opacity(this.pulse ? 0 : 0.5)
-            .animation({ duration: 1800, curve: Curve.EaseOut, iterations: -1 })
-          Progress({ value: this.shown, total: 100, type: ProgressType.Ring })
-          .width(74).height(74)
-          .color(this.scoreColor())
-          .style({ strokeWidth: 6 })
-          .shadow({ radius: 14, color: this.scoreColor(), offsetY: 0 })
-            .opacity(1)
-        }
-        .width(74).height(74)
-
-        Column({ space: 5 }) {
-          this.meta('大运', this.fortune.curYunName.length > 0 ?
-          this.fortune.curYunName + ' ' + this.fortune.curYunFrom.toFixed(1) + '–' +
-          this.fortune.curYunTo.toFixed(1) + '岁' : '—')
-          this.meta('节令', this.fortune.today.jiePrev.name + '后 · ' + this.fortune.today.jieNext.name + '前')
-          this.meta('流年', this.fortune.today.year.name + ' ' + this.fortune.today.year.god)
-        }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
       }
       .width('100%')
-      .padding(14)
-      .linearGradient({ angle: 135, colors: [['#1C2130', 0], ['#12151D', 1]] })
-      .borderRadius(Theme.R_SM)
+      .padding({ top: 10, bottom: 10, left: 10, right: 10 })
+      .backgroundColor(Theme.CARD2)
       .border({ width: 1, color: Theme.LINE_SOFT })
+      .borderRadius(Theme.R_SM)
 
-      // 宜 / 忌
+      // 数据读数
+      Column({ space: 4 }) {
+        this.row('大运 LUCK_CYCLE', this.fortune.curYunName.length > 0 ?
+          this.fortune.curYunName + ' ' + this.fortune.curYunFrom.toFixed(1) + '-' +
+          this.fortune.curYunTo.toFixed(1) + 'Y' : '—')
+        this.row('节令 SEASON', this.fortune.today.jiePrev.name + ' → ' + this.fortune.today.jieNext.name)
+        this.row('流年 YEAR', this.fortune.today.year.name + ' ' + this.fortune.today.year.god)
+        this.row('日主 DAYMASTER', this.chart.day.ganChar + ' / ' + this.chart.dayWx + ' / ' +
+          this.chart.strength.stateText)
+        this.row('喜用神 FAVOR', this.chart.strength.favText)
+        this.row('忌神 AVOID', this.chart.strength.unfavText)
+      }
+      .width('100%')
+
+      // 宜忌
       Row({ space: 12 }) {
-        Column({ space: 7 }) {
-          Text('宜').fontSize(13).fontWeight(FontWeight.Bold).fontColor(Theme.OK)
+        Column({ space: 5 }) {
+          Text('+ 宜 YI').fontSize(12).fontColor(Theme.GREEN).fontFamily(Theme.MONO)
           ForEach(this.fortune.yi, (x: string) => {
-            Row({ space: 6 }) {
-              Text('·').fontSize(11).fontColor(Theme.OK)
-              Text(x).fontSize(12).fontColor(Theme.TEXT2).layoutWeight(1)
-            }
-            .width('100%')
-            .alignItems(VerticalAlign.Top)
+            Text('· ' + x).fontSize(11).fontColor(Theme.TEXT2).fontFamily(Theme.MONO).lineHeight(17)
           }, (x: string) => x)
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
 
-        Column({ space: 7 }) {
-          Text('忌').fontSize(13).fontWeight(FontWeight.Bold).fontColor(Theme.BAD)
+        Column({ space: 5 }) {
+          Text('- 忌 JI').fontSize(12).fontColor(Theme.RED).fontFamily(Theme.MONO)
           ForEach(this.fortune.ji, (x: string) => {
-            Row({ space: 6 }) {
-              Text('·').fontSize(11).fontColor(Theme.BAD)
-              Text(x).fontSize(12).fontColor(Theme.TEXT2).layoutWeight(1)
-            }
-            .width('100%')
-            .alignItems(VerticalAlign.Top)
+            Text('· ' + x).fontSize(11).fontColor(Theme.TEXT2).fontFamily(Theme.MONO).lineHeight(17)
           }, (x: string) => x)
         }
         .alignItems(HorizontalAlign.Start)
@@ -149,27 +140,23 @@ export struct TodayCard {
       .width('100%')
 
       // 解读
-      Column({ space: 7 }) {
-        Text('今日解读').fontSize(13).fontWeight(FontWeight.Bold).fontColor(Theme.GOLD)
+      Column({ space: 5 }) {
+        Text('> 解读 NOTES').fontSize(11).fontColor(Theme.CYAN).fontFamily(Theme.MONO)
         ForEach(this.fortune.notes, (x: string) => {
-          Text(x).fontSize(12).fontColor(Theme.DIM).lineHeight(19)
+          Text(x).fontSize(11).fontColor(Theme.DIM).fontFamily(Theme.MONO).lineHeight(17)
         }, (x: string) => x)
       }
       .width('100%')
       .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
-    .padding(16)
-    .backgroundColor(Theme.CARD)
-    .borderRadius(Theme.R_CARD)
-    .border({ width: 1, color: Theme.LINE })
   }
 
   @Builder
-  meta(k: string, v: string) {
+  private row(k: string, v: string) {
     Row({ space: 6 }) {
-      Text(k).fontSize(11).fontColor(Theme.DIM)
-      Text(v).fontSize(11).fontColor(Theme.TEXT2)
+      Text(k).fontSize(10).fontColor(Theme.DIM).fontFamily(Theme.MONO).width(148)
+      Text(v).fontSize(11).fontColor(Theme.TEXT).fontFamily(Theme.MONO).layoutWeight(1)
     }
     .width('100%')
   }

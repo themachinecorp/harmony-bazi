@@ -87,14 +87,14 @@ struct Index {
       Scroll() {
         Column({ space: 14 }) {
           Column({ space: 6 }) {
-            Text('时 辰')
-              .fontSize(28).fontWeight(FontWeight.Bold).fontColor(Theme.GOLD)
-              .letterSpacing(8)
-            Row({ space: 8 }) {
-              Row().width(28).height(2).backgroundColor(Theme.RED).borderRadius(1)
-              Text('真太阳时排盘 · 八字 / 大运 / 流年 · 今日运势')
-                .fontSize(12).fontColor(Theme.DIM)
-            }
+            Text('$ bazi --init')
+              .fontSize(11).fontColor(Theme.GREEN).fontFamily(Theme.MONO)
+            Text('时 辰 // BAZI_ENGINE')
+              .fontSize(22).fontWeight(FontWeight.Bold).fontColor(Theme.GREEN)
+              .fontFamily(Theme.MONO).letterSpacing(2)
+              .textShadow({ radius: 14, color: '#6600FF9C', offsetX: 0, offsetY: 0 })
+            Text('真太阳时排盘 · 八字 / 大运 / 流年 · 今日运势')
+              .fontSize(11).fontColor(Theme.DIM).fontFamily(Theme.MONO)
           }
           .width('100%')
           .alignItems(HorizontalAlign.Start)
@@ -119,15 +119,16 @@ struct Index {
             .animation({ duration: 420, curve: Curve.EaseOut, delay: 40 })
           }
 
-          Button('排 盘')
+          Button('> 排 盘  [RUN]')
             .width('100%')
-            .height(50)
-            .fontSize(17)
+            .height(48)
+            .fontSize(15)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#FFF6E8')
-            .linearGradient({ angle: 90, colors: Theme.RED_GRADIENT })
+            .fontFamily(Theme.MONO)
+            .fontColor('#001208')
+            .backgroundColor(Theme.GREEN)
             .borderRadius(14)
-            .shadow({ radius: this.pressed ? 8 : 18, color: '#33C2410C', offsetY: this.pressed ? 2 : 6 })
+            .shadow({ radius: this.pressed ? 6 : 16, color: '#3300FF9C', offsetY: this.pressed ? 1 : 4 })
             .scale({ x: this.pressed ? 0.96 : 1, y: this.pressed ? 0.96 : 1 })
             .animation({ duration: 130, curve: Curve.EaseOut })
             .onTouch((e: TouchEvent) => {
@@ -142,20 +143,21 @@ struct Index {
             .animation({ duration: 420, curve: Curve.EaseOut, delay: 120 })
             .onClick(() => { this.compute() })
 
-          Text(this.formSummary())
-            .fontSize(11).fontColor(Theme.DIM)
+          Text('> ' + this.formSummary())
+            .fontSize(10).fontColor(Theme.DIM).fontFamily(Theme.MONO)
             .width('100%')
             .opacity(this.entered ? 1 : 0)
             .animation({ duration: 420, curve: Curve.EaseOut, delay: 200 })
 
           if (this.hasSaved) {
-            Button('查看上次结果')
+            Button('> 查看上次结果  [LAST]')
               .width('100%')
               .height(42)
-              .fontSize(14)
-              .fontColor(Theme.GOLD)
+              .fontSize(13)
+              .fontFamily(Theme.MONO)
+              .fontColor(Theme.GREEN)
               .backgroundColor(Theme.CARD)
-              .borderRadius(10)
+              .borderRadius(Theme.R_SM)
               .border({ width: 1, color: Theme.LINE })
               .onClick(() => { this.getUIContext().getRouter().pushUrl({ url: 'pages/Result' }) })
           }

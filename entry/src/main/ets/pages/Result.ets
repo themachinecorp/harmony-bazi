@@ -20,9 +20,15 @@ struct Result {
   @State private entered: boolean = false
   /** 背景光斑漂移开关 */
   @State private glow: boolean = false
+  @State private cursor: boolean = false
 
   aboutToAppear(): void {
     setTimeout(() => { this.glow = true }, 120)
+    const bl: () => void = (): void => {
+      this.cursor = !this.cursor
+      setTimeout(bl, 520)
+    }
+    setTimeout(bl, 300)
     this.load()
   }
 
@@ -74,6 +80,16 @@ struct Result {
     this.getUIContext().getRouter().back()
   }
 
+  private chartText(): string {
+    const c: Chart = this.chart as Chart
+    return c.year.name.substring(0, 1) + ''
+  }
+
+  private chartTime(): string {
+    const c: Chart = this.chart as Chart
+    return c.day.name + ''
+  }
+
   private pillarsText(): string {
     const c: Chart = this.chart as Chart
     return c.year.name + ' ' + c.month.name + ' ' + c.day.name + ' ' + c.hour.name
@@ -109,6 +125,13 @@ struct Result {
         .opacity(this.glow ? 0.7 : 0.35)
         .animation({ duration: 6800, curve: Curve.EaseInOut, iterations: -1, playMode: PlayMode.Alternate })
 
+      // 扫描线
+      Image($r('app.media.scanlines'))
+        .width('100%').height('100%')
+        .objectRepeat(ImageRepeat.Repeat)
+        .opacity(0.5)
+        .hitTestBehavior(HitTestMode.None)
+
       Column() {
       // 顶栏：返回 + 标题 + 生辰摘要
       Row({ space: 10 }) {
@@ -117,8 +140,9 @@ struct Result {
           .width(26)
           .onClick(() => { this.goBack() })
         Column({ space: 2 }) {
-          Text('命盘总览').fontSize(19).fontWeight(FontWeight.Bold).fontColor(Theme.GOLD)
-          Text(this.summary).fontSize(11).fontColor(Theme.DIM).maxLines(1)
+          Text('时辰 // BAZI_ENGINE').fontSize(16).fontWeight(FontWeight.Bold)
+            .fontColor(Theme.GREEN).fontFamily(Theme.MONO).letterSpacing(1)
+          Text(this.summary).fontSize(10).fontColor(Theme.DIM).fontFamily(Theme.MONO).maxLines(1)
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
@@ -131,23 +155,36 @@ struct Result {
         Scroll() {
           Column({ space: 14 }) {
             // 命盘在前：先看自己的八字，再看今天运势（避免把「今日干支」当成命盘）
-            // 主视觉：旋转罗盘 + 金色四柱大字
-            Stack({ alignContent: Alignment.Center }) {
-              CompassWheel({ wheelSize: 232 })
-              Column({ space: 8 }) {
+            // 终端 banner
+            Column({ space: 8 }) {
+              Text('$ bazi --chart --date ' + this.chartText() + ' --time ' + this.chartTime())
+                .fontSize(10).fontColor(Theme.GREEN).fontFamily(Theme.MONO)
+              Row({ space: 8 }) {
                 Text(this.pillarsText())
-                  .fontSize(21).fontWeight(FontWeight.Bold).fontColor(Theme.GOLD)
-                  .letterSpacing(3)
-                  .textShadow({ radius: 18, color: '#99D9B36C', offsetX: 0, offsetY: 0 })
-                Text(this.pillarsDetail())
-                  .fontSize(10).fontColor(Theme.DIM).letterSpacing(1)
+                  .fontSize(22).fontWeight(FontWeight.Bold).fontColor(Theme.GREEN)
+                  .fontFamily(Theme.MONO).letterSpacing(4)
+                  .textShadow({ radius: 16, color: '#7700FF9C', offsetX: 0, offsetY: 0 })
+                if (this.cursor) {
+                  Text('▌').fontSize(20).fontColor(Theme.GREEN).fontFamily(Theme.MONO)
+                }
               }
+              .width('100%')
+              Row({ space: 10 }) {
+                Text('CALC: VSOP87').fontSize(9).fontColor(Theme.DIM).fontFamily(Theme.MONO)
+                Text('SOLAR: TRUE').fontSize(9).fontColor(Theme.DIM).fontFamily(Theme.MONO)
+                Text('JIEQI: 24').fontSize(9).fontColor(Theme.DIM).fontFamily(Theme.MONO)
+                Text('STATUS: OK').fontSize(9).fontColor(Theme.GREEN).fontFamily(Theme.MONO)
+              }
+              .width('100%')
             }
             .width('100%')
-            .height(252)
+            .padding(12)
+            .backgroundColor(Theme.CARD2)
+            .border({ width: 1, color: Theme.GREEN })
+            .borderRadius(Theme.R_CARD)
             .opacity(this.entered ? 1 : 0)
-            .translate({ y: this.entered ? 0 : 26 })
-            .animation({ duration: 520, curve: Curve.EaseOut, delay: 0 })
+            .translate({ y: this.entered ? 0 : 20 })
+            .animation({ duration: 420, curve: Curve.EaseOut, delay: 0 })
 
             Column() {
               ChartCard({ chart: this.chart as Chart })
