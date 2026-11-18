@@ -709,8 +709,17 @@ function computeStrength(year: Pillar, month: Pillar, day: Pillar, hour: Pillar,
   }
 }
 
+/** 经度脏值防御：非有限或越界按 120°E 处理，避免真太阳时溢出成年份级垃圾 */
+export function safeLon(lon: number): number {
+  if (!isFinite(lon) || lon < -180 || lon > 180) {
+    return 120
+  }
+  return lon
+}
+
 export function buildChart(o: BirthInput): Chart {
   const tz: number = o.tz > 0 ? o.tz : 8
+  const lon: number = safeLon(o.lon)
   let h: number = o.h
   const mi: number = o.mi
   if (o.dst) {
@@ -719,7 +728,7 @@ export function buildChart(o: BirthInput): Chart {
       h += 24
     }
   }
-  const st: SolarTime = solarTime(o.y, o.m, o.d, h, mi, o.lon, tz)
+  const st: SolarTime = solarTime(o.y, o.m, o.d, h, mi, lon, tz)
   const cal: Cal = st.cal
   const clockJd: number = st.clockJd
   const bracket: Term[] = jieBracket(clockJd, cal.y, tz)
@@ -823,7 +832,7 @@ function jieBranchOf(name: string): string {
 
 /* ---------- 今日 ---------- */
 export function todayPillars(spec: NowSpec, lon: number, tz: number): TodayInfo {
-  const st: SolarTime = solarTime(spec.y, spec.m, spec.d, spec.h, spec.mi, lon, tz)
+  const st: SolarTime = solarTime(spec.y, spec.m, spec.d, spec.h, spec.mi, safeLon(lon), tz)
   const cal: Cal = st.cal
   const clockJd: number = st.clockJd
   const bracket: Term[] = jieBracket(clockJd, cal.y, tz)

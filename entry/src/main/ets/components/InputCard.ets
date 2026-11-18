@@ -23,6 +23,33 @@ export struct InputCard {
   @Prop birth: BirthInput
   onChange: (b: BirthInput) => void = (b: BirthInput): void => {}
 
+  /** 经度输入的初始文本。用普通字段而非 @State：输入过程中不回显、不与框架抢焦点，
+   *  只有切换城市时才刷新（这正是此前「1065522222200001024」脏值的成因）。 */
+  private lonInit: string = ''
+  private rawLon: string = ''
+  @State private lonWarn: string = ''
+
+  aboutToAppear(): void {
+    this.lonInit = this.birth.lon.toFixed(2)
+    this.rawLon = this.lonInit
+  }
+
+  private commitLon(): void {
+    const v: number = parseFloat(this.rawLon)
+    if (isNaN(v)) {
+      this.lonWarn = '经度无法识别，仍用 ' + this.birth.lon.toFixed(2) + '°E'
+      return
+    }
+    if (v < -180 || v > 180) {
+      this.lonWarn = '经度须在 -180~180 之间（东经为正），当前输入已忽略'
+      return
+    }
+    this.lonWarn = ''
+    if (Math.abs(v - this.birth.lon) > 0.0001) {
+      this.patch({ lon: v })
+    }
+  }
+
   private cityOptions(): SelectOption[] {
     const opts: SelectOption[] = []
     for (let i = 0; i < CITIES.length; i++) {
@@ -162,6 +189,9 @@ export struct InputCard {
             .backgroundColor(Theme.CARD2)
             .onSelect((index: number) => {
               const c: City = CITIES[index]
+              this.lonInit = c.lon.toFixed(2)
+              this.rawLon = this.lonInit
+              this.lonWarn = ''
               this.patch({ cityIdx: index, lon: c.lon })
             })
         }
@@ -169,17 +199,16 @@ export struct InputCard {
         .layoutWeight(1)
 
         Column({ space: 6 }) {
-          Text('经度（东经）').fontSize(12).fontColor(Theme.DIM)
-          TextInput({ text: this.birth.lon.toFixed(2) })
+          Text('经度（东经，可改）').fontSize(12).fontColor(Theme.DIM)
+          TextInput({ text: this.lonInit })
             .type(InputType.Number)
             .fontSize(15).fontColor(Theme.TEXT)
             .backgroundColor(Theme.CARD2)
-            .onChange((value: string) => {
-              const v: number = parseFloat(value)
-              if (!isNaN(v)) {
-                this.patch({ lon: v })
-              }
-            })
+            .onChange((value: string) => { this.rawLon = value })
+            .onBlur(() => { this.commitLon() })
+          if (this.lonWarn.length > 0) {
+            Text(this.lonWarn).fontSize(11).fontColor(Theme.BAD).maxLines(2)
+          }
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)

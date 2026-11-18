@@ -68,6 +68,7 @@ export struct YunCard {
         .width('100%')
         .margin({ top: 10 })
       this.kv('钟表时间', this.chart.solar.clock + '（UTC+8）')
+      this.kv('出生地经度', this.chart.input.lon.toFixed(2) + '°E（东经为正）')
       this.kv('经度时差', (this.chart.solar.lonAdjMin >= 0 ? '+' : '') +
         this.chart.solar.lonAdjMin.toFixed(1) + ' 分钟')
       this.kv('均时差', (this.chart.solar.eotMin >= 0 ? '+' : '') + this.chart.solar.eotMin.toFixed(1) + ' 分钟')
