@@ -6,7 +6,7 @@ import { Theme } from '../model/Theme'
 
 @Component
 export struct CompassWheel {
-  @Prop size: number = 220
+  @Prop wheelSize: number = 220
   @State private spin: boolean = false
 
   aboutToAppear(): void {
@@ -53,7 +53,7 @@ export struct CompassWheel {
         .width('46%').height('46%').borderRadius('50%')
         .border({ width: 1, color: '#22D9B36C' })
     }
-    .width(this.size)
-    .height(this.size)
+    .width(this.wheelSize)
+    .height(this.wheelSize)
   }
 }

@@ -133,7 +133,7 @@ struct Result {
             // 命盘在前：先看自己的八字，再看今天运势（避免把「今日干支」当成命盘）
             // 主视觉：旋转罗盘 + 金色四柱大字
             Stack({ alignContent: Alignment.Center }) {
-              CompassWheel({ size: 232 })
+              CompassWheel({ wheelSize: 232 })
               Column({ space: 8 }) {
                 Text(this.pillarsText())
                   .fontSize(21).fontWeight(FontWeight.Bold).fontColor(Theme.GOLD)
