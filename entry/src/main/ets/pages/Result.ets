@@ -2,7 +2,7 @@
  * 结果页：今日概览 / 命盘四柱 / 大运流年 / 真太阳时；左上角返回可重新输入
  */
 import { router } from '@kit.ArkUI'
-import { BirthInput, Chart, Fortune, YearItem, buildChart, dailyFortune, yearList, beijingNow, pad2 } from '../model/Bazi'
+import { BirthInput, FormData, Chart, Fortune, YearItem, buildChart, dailyFortune, yearList, beijingNow, pad2, formToBirth } from '../model/Bazi'
 import { birthStore } from '../store/BirthStore'
 import { TodayCard } from '../components/TodayCard'
 import { ChartCard } from '../components/ChartCard'
@@ -38,22 +38,28 @@ struct Result {
     this.chart = null
     this.fortune = null
     this.years = []
-    let o: BirthInput | null = birthStore.getQueried()
-    if (o === null) {
-      o = await birthStore.load()
+    let f: FormData | null = birthStore.getQueried()
+    if (f === null) {
+      f = await birthStore.load()
     }
-    if (o === null) {
+    if (f === null) {
       router.back()
       return
     }
+    const parsed = formToBirth(f)
+    if (parsed === null) {
+      router.back()
+      return
+    }
+    const o: BirthInput = parsed
     const c: Chart = buildChart(o)
     const spec = beijingNow()
     const f: Fortune = dailyFortune(c, spec, o.lon, 8)
     this.chart = c
     this.fortune = f
     this.years = yearList(c, spec.y - 2, spec.y + 5)
-    this.summary = o.y.toString() + '-' + pad2(o.m) + '-' + pad2(o.d) + ' ' + pad2(o.h) + ':' + pad2(o.mi) +
-      '　经度 ' + o.lon.toFixed(2) + '°E　真太阳时 ' + c.solar.trueStr.substring(0, 16)
+    this.summary = f.dateStr + ' ' + f.timeStr + '　经度 ' + f.lonStr + '°E　真太阳时 ' +
+      c.solar.trueStr.substring(0, 16)
   }
 
   /** 返回录入页：先打标记，让录入页回填最近一次查询的信息 */

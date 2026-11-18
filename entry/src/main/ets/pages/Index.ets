@@ -2,7 +2,7 @@
  * 生辰录入页：填信息 → 排盘 → 跳转结果页
  */
 import { router, promptAction } from '@kit.ArkUI'
-import { BirthInput, CITIES, City, pad2 } from '../model/Bazi'
+import { FormData, CITIES, formToBirth } from '../model/Bazi'
 import { birthStore } from '../store/BirthStore'
 import { InputCard } from '../components/InputCard'
 import { Theme } from '../model/Theme'
@@ -10,14 +10,10 @@ import { Theme } from '../model/Theme'
 @Entry
 @Component
 struct Index {
-  @State private birth: BirthInput = {
-    y: 1990,
-    m: 6,
-    d: 15,
-    h: 14,
-    mi: 30,
-    lon: 116.41,
-    tz: 8,
+  @State private form: FormData = {
+    dateStr: '1990-06-15',
+    timeStr: '14:30',
+    lonStr: '116.41',
     gender: 'm',
     dst: false,
     unknownHour: false,
@@ -33,34 +29,21 @@ struct Index {
   async restore(): Promise<void> {
     // 优先用内存里的「最近一次查询」；没有（冷启动）才读存档。
     // 这样无论页面是被重建还是被回填，显示的都是最新查询的那份。
-    let o: BirthInput | null = birthStore.getQueried()
+    let o: FormData | null = birthStore.getQueried()
     if (o === null) {
       o = await birthStore.load()
     }
     if (o !== null) {
-      const lonBad: boolean = !isFinite(o.lon) || o.lon < -180 || o.lon > 180
-      this.birth = {
-        y: o.y,
-        m: o.m,
-        d: o.d,
-        h: o.h,
-        mi: o.mi,
-        lon: lonBad ? 116.41 : o.lon,
-        tz: o.tz > 0 ? o.tz : 8,
-        gender: o.gender,
-        dst: o.dst,
-        unknownHour: o.unknownHour,
-        cityIdx: lonBad ? 0 : (o.cityIdx === undefined ? 0 : o.cityIdx)
-      }
+      this.form = o
       this.hasSaved = true
-      birthStore.setDraft(this.birth)
+      birthStore.setDraft(o)
     }
     this.loaded = true
   }
 
-  onBirthChange(b: BirthInput): void {
-    this.birth = b
-    birthStore.setDraft(b)
+  onFormChange(f: FormData): void {
+    this.form = f
+    birthStore.setDraft(f)
   }
 
   /** 从结果页返回：表单回填「最近一次查询」的信息。
@@ -70,31 +53,31 @@ struct Index {
     if (!birthStore.consumeReturned()) {
       return
     }
-    const q: BirthInput | null = birthStore.getQueried()
+    const q: FormData | null = birthStore.getQueried()
     if (q !== null) {
-      this.birth = q
+      this.form = q
       birthStore.setDraft(q)
     }
   }
 
   async compute(): Promise<void> {
-    // 提交前再校验一次经度（输入框可能还没失焦提交）
-    if (!isFinite(this.birth.lon) || this.birth.lon < -180 || this.birth.lon > 180) {
-      promptAction.showToast({ message: '出生地经度须在 -180~180 之间（东经为正）' })
+    // 提交前校验格式（日期 1994-06-14 / 时间 14:30 / 经度 -180~180）
+    if (formToBirth(this.form) === null) {
+      promptAction.showToast({ message: '请检查日期(1994-06-14)、时间(14:30)、经度格式' })
       return
     }
     // 记住「最近一次查询」：返回时表单据此回填，结果页也读它
-    birthStore.setQueried(this.birth)
-    birthStore.setDraft(this.birth)
-    await birthStore.save(this.birth)
+    birthStore.setQueried(this.form)
+    birthStore.setDraft(this.form)
+    await birthStore.save(this.form)
     router.pushUrl({ url: 'pages/Result' })
   }
 
   private formSummary(): string {
-    const idx: number = this.birth.cityIdx === undefined ? -1 : this.birth.cityIdx
+    const idx: number = this.form.cityIdx
     const city: string = (idx >= 0 && idx < CITIES.length) ? CITIES[idx].name : '自定义经度'
-    return '表单当前：' + this.birth.y.toString() + '-' + pad2(this.birth.m) + '-' + pad2(this.birth.d) +
-      ' ' + pad2(this.birth.h) + ':' + pad2(this.birth.mi) + '　' + city + ' ' + this.birth.lon.toFixed(2) + '°E'
+    return '表单当前：' + this.form.dateStr + ' ' + this.form.timeStr + '　' + city + ' ' +
+      this.form.lonStr + '°E'
   }
 
   build() {
@@ -117,8 +100,14 @@ struct Index {
 
           if (this.loaded) {
             InputCard({
-              birthJson: JSON.stringify(this.birth),
-              onChange: (b: BirthInput) => { this.onBirthChange(b) }
+              dateStr: this.form.dateStr,
+              timeStr: this.form.timeStr,
+              lonStr: this.form.lonStr,
+              gender: this.form.gender,
+              dst: this.form.dst,
+              unknownHour: this.form.unknownHour,
+              cityIdx: this.form.cityIdx,
+              onChange: (f: FormData) => { this.onFormChange(f) }
             })
           }
 

@@ -1,113 +1,86 @@
 /**
- * 生辰录入卡：分段选择 + 按钮式输入行 + 右侧开关
- * 用 @Prop + onChange 回调（不使用 @Link/$$ 语法，跨组件更稳）
+ * 生辰录入卡：性别 / 日期 / 时间 / 出生地经度 / 夏令时 / 时辰未知
+ *
+ * 数据流约定（踩坑换来的）：
+ * - 父组件只用**原始类型** prop 传值（string/number/boolean），子组件每次改动都把
+ *   **原始文本**回传，父组件原样存下并回显 —— 没有对象、没有 JSON.parse、
+ *   没有「规范化回写」，所以不会出现回显循环或界面与状态分裂。
+ * - 日期/时间既能点选择器，也能直接手输；两者都写原始文本。
  */
-import { BirthInput, CITIES, City, pad2 } from '../model/Bazi'
+import { CITIES, City, FormData } from '../model/Bazi'
 import { Theme } from '../model/Theme'
-
-interface BirthPatch {
-  y?: number
-  m?: number
-  d?: number
-  h?: number
-  mi?: number
-  lon?: number
-  gender?: string
-  dst?: boolean
-  unknownHour?: boolean
-  cityIdx?: number
-}
 
 @Component
 export struct InputCard {
-  /** 生辰用 JSON 字符串传入：字符串是原始类型，父组件一改就会同步，不受 @Prop 深拷贝语义影响 */
-  @Prop birthJson: string
-  @State private lonWarn: string = ''
-  onChange: (b: BirthInput) => void = (b: BirthInput): void => {}
+  @Prop dateStr: string = '1990-06-15'
+  @Prop timeStr: string = '14:30'
+  @Prop lonStr: string = '116.41'
+  @Prop gender: string = 'm'
+  @Prop dst: boolean = false
+  @Prop unknownHour: boolean = false
+  @Prop cityIdx: number = 0
+  onChange: (f: FormData) => void = (f: FormData): void => {}
 
-  /** 经度输入的初始文本。用普通字段而非 @State：输入过程中不回显、不与框架抢焦点，
-   *  只有切换城市时才刷新（这正是此前「1065522222200001024」脏值的成因）。 */
-  private lonInit: string = ''
-  private rawLon: string = ''
-
-  aboutToAppear(): void {
-    this.lonInit = this.cur().lon.toFixed(2)
-    this.rawLon = this.lonInit
-  }
-
-  /** 当前表单值（由 JSON prop 解析而来，始终与父组件一致） */
-  private cur(): BirthInput {
-    return JSON.parse(this.birthJson) as BirthInput
-  }
-
-  private commitLon(): void {
-    const v: number = parseFloat(this.rawLon)
-    if (isNaN(v)) {
-      this.lonWarn = '经度无法识别，仍用 ' + this.cur().lon.toFixed(2) + '°E'
-      return
+  /** 以当前值为底，回传改动后的原始数据 */
+  private emit(dateStr: string, timeStr: string, lonStr: string, gender: string,
+    dst: boolean, unknownHour: boolean, cityIdx: number): void {
+    const f: FormData = {
+      dateStr: dateStr,
+      timeStr: timeStr,
+      lonStr: lonStr,
+      gender: gender,
+      dst: dst,
+      unknownHour: unknownHour,
+      cityIdx: cityIdx
     }
-    if (v < -180 || v > 180) {
-      this.lonWarn = '经度须在 -180~180 之间（东经为正），当前输入已忽略'
-      return
-    }
-    this.lonWarn = ''
-    if (Math.abs(v - this.cur().lon) > 0.0001) {
-      this.patch({ lon: v })
-    }
-  }
-
-  private cityIdx(): number {
-    const c: number | undefined = this.cur().cityIdx
-    return c === undefined ? 0 : c
-  }
-
-  private patch(changed: BirthPatch): void {
-    const src: BirthInput = this.cur()
-    const b: BirthInput = {
-      y: src.y,
-      m: src.m,
-      d: src.d,
-      h: src.h,
-      mi: src.mi,
-      lon: src.lon,
-      tz: src.tz,
-      gender: src.gender,
-      dst: src.dst,
-      unknownHour: src.unknownHour,
-      cityIdx: src.cityIdx
-    }
-    if (changed.y !== undefined) { b.y = changed.y }
-    if (changed.m !== undefined) { b.m = changed.m }
-    if (changed.d !== undefined) { b.d = changed.d }
-    if (changed.h !== undefined) { b.h = changed.h }
-    if (changed.mi !== undefined) { b.mi = changed.mi }
-    if (changed.lon !== undefined) { b.lon = changed.lon }
-    if (changed.gender !== undefined) { b.gender = changed.gender }
-    if (changed.dst !== undefined) { b.dst = changed.dst }
-    if (changed.unknownHour !== undefined) { b.unknownHour = changed.unknownHour }
-    if (changed.cityIdx !== undefined) { b.cityIdx = changed.cityIdx }
-    this.onChange(b)
+    this.onChange(f)
   }
 
   private pickDate(): void {
+    const parts: string[] = this.dateStr.trim().split('-')
+    let y: number = 1990, m: number = 1, d: number = 1
+    if (parts.length === 3) {
+      const py: number = parseInt(parts[0])
+      const pm: number = parseInt(parts[1])
+      const pd: number = parseInt(parts[2])
+      if (!isNaN(py) && !isNaN(pm) && !isNaN(pd)) {
+        y = py; m = pm; d = pd
+      }
+    }
     DatePickerDialog.show({
       start: new Date(1900, 0, 1),
       end: new Date(2100, 11, 31),
-      selected: new Date(this.cur().y, this.cur().m - 1, this.cur().d),
+      selected: new Date(y, m - 1, d),
       onDateAccept: (value: Date) => {
-        this.patch({ y: value.getFullYear(), m: value.getMonth() + 1, d: value.getDate() })
+        const s: string = value.getFullYear().toString() + '-' + this.two(value.getMonth() + 1) + '-' +
+          this.two(value.getDate())
+        this.emit(s, this.timeStr, this.lonStr, this.gender, this.dst, this.unknownHour, this.cityIdx)
       }
     })
   }
 
   private pickTime(): void {
+    const parts: string[] = this.timeStr.trim().split(':')
+    let h: number = 12, mi: number = 0
+    if (parts.length === 2) {
+      const ph: number = parseInt(parts[0])
+      const pm: number = parseInt(parts[1])
+      if (!isNaN(ph) && !isNaN(pm)) {
+        h = ph; mi = pm
+      }
+    }
     TimePickerDialog.show({
-      selected: new Date(2020, 0, 1, this.cur().h, this.cur().mi),
+      selected: new Date(2020, 0, 1, h, mi),
       useMilitaryTime: true,
       onAccept: (value: TimePickerResult) => {
-        this.patch({ h: value.hour, mi: value.minute })
+        const s: string = this.two(value.hour) + ':' + this.two(value.minute)
+        this.emit(this.dateStr, s, this.lonStr, this.gender, this.dst, this.unknownHour, this.cityIdx)
       }
     })
+  }
+
+  private two(n: number): string {
+    return (n < 10 ? '0' : '') + n.toString()
   }
 
   private cityOptions(): SelectOption[] {
@@ -120,7 +93,7 @@ export struct InputCard {
 
   build() {
     Column({ space: 14 }) {
-      // 性别：分段控件
+      // 性别
       Column({ space: 8 }) {
         Text('性别').fontSize(12).fontColor(Theme.DIM)
         Row({ space: 8 }) {
@@ -134,13 +107,10 @@ export struct InputCard {
       .width('100%')
       .alignItems(HorizontalAlign.Start)
 
-      // 日期 / 时间：按钮式输入行
+      // 日期 / 时间
       Row({ space: 10 }) {
-        this.pickBox('出生日期',
-          this.cur().y.toString() + '-' + pad2(this.cur().m) + '-' + pad2(this.cur().d),
-          () => { this.pickDate() })
-        this.pickBox('出生时间', pad2(this.cur().h) + ':' + pad2(this.cur().mi),
-          () => { this.pickTime() })
+        this.dateBox('出生日期', this.dateStr, () => { this.pickDate() })
+        this.timeBox('出生时间', this.timeStr, () => { this.pickTime() })
       }
       .width('100%')
 
@@ -149,18 +119,16 @@ export struct InputCard {
         Text('出生地点').fontSize(12).fontColor(Theme.DIM)
         Row() {
           Select(this.cityOptions())
-            .selected(this.cityIdx())
-            .value(CITIES[this.cityIdx()].name)
+            .selected(this.cityIdx)
+            .value(CITIES[this.cityIdx < 0 ? 0 : this.cityIdx].name)
             .menuBackgroundColor(Theme.CARD)
             .fontColor(Theme.TEXT)
             .backgroundColor(Theme.CARD2)
             .layoutWeight(1)
             .onSelect((index: number) => {
               const c: City = CITIES[index]
-              this.lonInit = c.lon.toFixed(2)
-              this.rawLon = this.lonInit
-              this.lonWarn = ''
-              this.patch({ cityIdx: index, lon: c.lon })
+              this.emit(this.dateStr, this.timeStr, c.lon.toFixed(2), this.gender, this.dst,
+                this.unknownHour, index)
             })
           Text('›').fontSize(16).fontColor(Theme.DIM).margin({ left: 8 })
         }
@@ -176,28 +144,29 @@ export struct InputCard {
       // 经度
       Column({ space: 8 }) {
         Text('出生地经度（东经为正）').fontSize(12).fontColor(Theme.DIM)
-        TextInput({ text: this.lonInit })
+        TextInput({ text: this.lonStr })
           .type(InputType.Number)
           .fontSize(15).fontColor(Theme.TEXT)
           .backgroundColor(Theme.CARD2)
           .borderRadius(Theme.R_SM)
-          .onChange((value: string) => { this.rawLon = value })
-          .onBlur(() => { this.commitLon() })
-        if (this.lonWarn.length > 0) {
-          Text(this.lonWarn).fontSize(11).fontColor(Theme.BAD).maxLines(2)
-        } else {
-          Text('用于换算真太阳时，直接决定时柱与月柱边界').fontSize(11).fontColor(Theme.DIM)
-        }
+          .onChange((v: string) => {
+            this.emit(this.dateStr, this.timeStr, v, this.gender, this.dst, this.unknownHour, this.cityIdx)
+          })
+        Text('用于换算真太阳时，直接决定时柱与月柱边界').fontSize(11).fontColor(Theme.DIM)
       }
       .width('100%')
       .alignItems(HorizontalAlign.Start)
 
       // 开关
       Column({ space: 0 }) {
-        this.switchRow('出生时为夏令时（+1 小时）', '中国 1986–1991 年实行', this.cur().dst,
-          (v: boolean) => { this.patch({ dst: v }) })
-        this.switchRow('时辰未知', '未知则不排时柱', this.cur().unknownHour,
-          (v: boolean) => { this.patch({ unknownHour: v }) })
+        this.switchRow('出生时为夏令时（+1 小时）', '中国 1986–1991 年实行', this.dst,
+          (v: boolean) => {
+            this.emit(this.dateStr, this.timeStr, this.lonStr, this.gender, v, this.unknownHour, this.cityIdx)
+          })
+        this.switchRow('时辰未知', '未知则不排时柱', this.unknownHour,
+          (v: boolean) => {
+            this.emit(this.dateStr, this.timeStr, this.lonStr, this.gender, this.dst, v, this.cityIdx)
+          })
       }
       .width('100%')
     }
@@ -212,30 +181,53 @@ export struct InputCard {
   sex(label: string, value: string) {
     Text(label)
       .fontSize(14)
-      .fontColor(this.cur().gender === value ? '#1A1206' : Theme.TEXT2)
+      .fontColor(this.gender === value ? '#1A1206' : Theme.TEXT2)
       .width(76)
       .height(36)
       .textAlign(TextAlign.Center)
-      .backgroundColor(this.cur().gender === value ? Theme.GOLD : Theme.CARD2)
+      .backgroundColor(this.gender === value ? Theme.GOLD : Theme.CARD2)
       .borderRadius(Theme.R_PILL)
-      .border({ width: 1, color: this.cur().gender === value ? Theme.GOLD : Theme.LINE_SOFT })
-      .onClick(() => { this.patch({ gender: value }) })
+      .border({ width: 1, color: this.gender === value ? Theme.GOLD : Theme.LINE_SOFT })
+      .onClick(() => {
+        this.emit(this.dateStr, this.timeStr, this.lonStr, value, this.dst, this.unknownHour, this.cityIdx)
+      })
   }
 
   @Builder
-  pickBox(label: string, value: string, action: () => void) {
+  dateBox(label: string, value: string, pick: () => void) {
     Column({ space: 6 }) {
-      Text(label).fontSize(12).fontColor(Theme.DIM)
-      Row({ space: 8 }) {
-        Text(value).fontSize(15).fontColor(Theme.TEXT).layoutWeight(1)
-        Text('›').fontSize(16).fontColor(Theme.DIM)
+      Row({ space: 6 }) {
+        Text(label).fontSize(12).fontColor(Theme.DIM).layoutWeight(1)
+        Text('选择').fontSize(11).fontColor(Theme.GOLD).onClick(() => { pick() })
       }
       .width('100%')
-      .padding({ left: 12, right: 12, top: 11, bottom: 11 })
-      .backgroundColor(Theme.CARD2)
-      .borderRadius(Theme.R_SM)
-      .border({ width: 1, color: Theme.LINE_SOFT })
-      .onClick(() => { action() })
+      TextInput({ text: value })
+        .fontSize(15).fontColor(Theme.TEXT)
+        .backgroundColor(Theme.CARD2)
+        .borderRadius(Theme.R_SM)
+        .onChange((v: string) => {
+          this.emit(v, this.timeStr, this.lonStr, this.gender, this.dst, this.unknownHour, this.cityIdx)
+        })
+    }
+    .layoutWeight(1)
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  timeBox(label: string, value: string, pick: () => void) {
+    Column({ space: 6 }) {
+      Row({ space: 6 }) {
+        Text(label).fontSize(12).fontColor(Theme.DIM).layoutWeight(1)
+        Text('选择').fontSize(11).fontColor(Theme.GOLD).onClick(() => { pick() })
+      }
+      .width('100%')
+      TextInput({ text: value })
+        .fontSize(15).fontColor(Theme.TEXT)
+        .backgroundColor(Theme.CARD2)
+        .borderRadius(Theme.R_SM)
+        .onChange((v: string) => {
+          this.emit(this.dateStr, v, this.lonStr, this.gender, this.dst, this.unknownHour, this.cityIdx)
+        })
     }
     .layoutWeight(1)
     .alignItems(HorizontalAlign.Start)

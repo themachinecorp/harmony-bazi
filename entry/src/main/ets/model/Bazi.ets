@@ -29,6 +29,49 @@ export interface Pillar {
   hidden: HiddenStem[]
 }
 
+/** 表单原始数据（全部是原始类型，避免对象传递带来的同步问题） */
+export interface FormData {
+  dateStr: string
+  timeStr: string
+  lonStr: string
+  gender: string
+  dst: boolean
+  unknownHour: boolean
+  cityIdx: number
+}
+
+/** 把表单原始数据解析成排盘输入；格式不合法返回 null */
+export function formToBirth(f: FormData): BirthInput | null {
+  const dp: string[] = f.dateStr.trim().split('-')
+  if (dp.length !== 3) {
+    return null
+  }
+  const y: number = parseInt(dp[0])
+  const m: number = parseInt(dp[1])
+  const d: number = parseInt(dp[2])
+  if (isNaN(y) || isNaN(m) || isNaN(d) || m < 1 || m > 12 || d < 1 || d > 31) {
+    return null
+  }
+  const tp: string[] = f.timeStr.trim().split(':')
+  if (tp.length !== 2) {
+    return null
+  }
+  const h: number = parseInt(tp[0])
+  const mi: number = parseInt(tp[1])
+  if (isNaN(h) || isNaN(mi) || h < 0 || h > 23 || mi < 0 || mi > 59) {
+    return null
+  }
+  const lon: number = parseFloat(f.lonStr)
+  if (isNaN(lon) || lon < -180 || lon > 180) {
+    return null
+  }
+  const b: BirthInput = {
+    y: y, m: m, d: d, h: h, mi: mi, lon: lon, tz: 8,
+    gender: f.gender, dst: f.dst, unknownHour: f.unknownHour, cityIdx: f.cityIdx
+  }
+  return b
+}
+
 export interface BirthInput {
   y: number
   m: number

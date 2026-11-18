@@ -3,24 +3,24 @@
  */
 import { preferences } from '@kit.ArkData'
 import { common } from '@kit.AbilityKit'
-import { BirthInput } from '../model/Bazi'
+import { FormData } from '../model/Bazi'
 
 export class BirthStore {
   private prefs: preferences.Preferences | undefined = undefined
   /** 最近一次【已查询】的生辰：表单回填与结果页都读它（不消费，可反复读） */
-  private queried: BirthInput | null = null
+  private queried: FormData | null = null
   /** 表单当前草稿 */
-  private draft: BirthInput | null = null
+  private draft: FormData | null = null
 
-  setQueried(o: BirthInput): void {
+  setQueried(o: FormData): void {
     this.queried = o
   }
 
-  getQueried(): BirthInput | null {
+  getQueried(): FormData | null {
     return this.queried
   }
 
-  setDraft(o: BirthInput): void {
+  setDraft(o: FormData): void {
     this.draft = o
   }
 
@@ -38,7 +38,7 @@ export class BirthStore {
     return r
   }
 
-  getDraft(): BirthInput | null {
+  getDraft(): FormData | null {
     return this.draft
   }
 
@@ -50,7 +50,7 @@ export class BirthStore {
     }
   }
 
-  async save(o: BirthInput): Promise<void> {
+  async save(o: FormData): Promise<void> {
     if (this.prefs === undefined) {
       return
     }
@@ -62,7 +62,7 @@ export class BirthStore {
     }
   }
 
-  async load(): Promise<BirthInput | null> {
+  async load(): Promise<FormData | null> {
     if (this.prefs === undefined) {
       return null
     }
@@ -71,7 +71,7 @@ export class BirthStore {
       if (!v) {
         return null
       }
-      const o = JSON.parse(v) as BirthInput
+      const o = JSON.parse(v) as FormData
       return o
     } catch (e) {
       console.error('[Bazi] 读取失败：' + JSON.stringify(e))
