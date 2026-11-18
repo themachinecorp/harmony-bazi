@@ -56,9 +56,10 @@ export struct ChartCard {
               .fontColor(Theme.wxColor(p.zwx))
             Text(p.god)
               .fontSize(11).fontColor(Theme.TEXT2)
-            Row()
-              .width(26).height(3).borderRadius(2)
+            Column()
+              .width(3).height(26).borderRadius(2)
               .backgroundColor(Theme.wxColor(p.wx))
+              .shadow({ radius: 10, color: Theme.wxColor(p.wx), offsetY: 0 })
           }
           .layoutWeight(1)
           .padding({ top: 10, bottom: 10 })

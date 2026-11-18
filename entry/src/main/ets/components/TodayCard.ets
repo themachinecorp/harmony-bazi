@@ -74,9 +74,11 @@ export struct TodayCard {
       Row({ space: 16 }) {
         Column({ space: 2 }) {
           Text(Math.round(this.shown).toString())
-            .fontSize(52).fontWeight(FontWeight.Bold).fontColor(this.scoreColor())
+            .fontSize(56).fontWeight(FontWeight.Bold).fontColor(this.scoreColor())
+            .textShadow({ radius: 24, color: this.scoreColor(), offsetX: 0, offsetY: 0 })
           Text(this.fortune.label)
             .fontSize(15).fontColor(this.scoreColor()).fontWeight(FontWeight.Medium)
+            .letterSpacing(2)
         }
         .alignItems(HorizontalAlign.Start)
 

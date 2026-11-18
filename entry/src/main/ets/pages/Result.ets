@@ -6,6 +6,7 @@ import { birthStore } from '../store/BirthStore'
 import { TodayCard } from '../components/TodayCard'
 import { ChartCard } from '../components/ChartCard'
 import { YunCard } from '../components/YunCard'
+import { CompassWheel } from '../components/CompassWheel'
 import { Theme } from '../model/Theme'
 
 @Entry
@@ -73,6 +74,16 @@ struct Result {
     this.getUIContext().getRouter().back()
   }
 
+  private pillarsText(): string {
+    const c: Chart = this.chart as Chart
+    return c.year.name + ' ' + c.month.name + ' ' + c.day.name + ' ' + c.hour.name
+  }
+
+  private pillarsDetail(): string {
+    const c: Chart = this.chart as Chart
+    return c.year.name + '年 · ' + c.month.name + '月 · ' + c.day.name + '日 · ' + c.hour.name + '时'
+  }
+
   private todayText(): string {
     const spec = beijingNow()
     const wd: string[] = ['日', '一', '二', '三', '四', '五', '六']
@@ -120,13 +131,31 @@ struct Result {
         Scroll() {
           Column({ space: 14 }) {
             // 命盘在前：先看自己的八字，再看今天运势（避免把「今日干支」当成命盘）
+            // 主视觉：旋转罗盘 + 金色四柱大字
+            Stack({ alignContent: Alignment.Center }) {
+              CompassWheel({ size: 232 })
+              Column({ space: 8 }) {
+                Text(this.pillarsText())
+                  .fontSize(21).fontWeight(FontWeight.Bold).fontColor(Theme.GOLD)
+                  .letterSpacing(3)
+                  .textShadow({ radius: 18, color: '#99D9B36C', offsetX: 0, offsetY: 0 })
+                Text(this.pillarsDetail())
+                  .fontSize(10).fontColor(Theme.DIM).letterSpacing(1)
+              }
+            }
+            .width('100%')
+            .height(252)
+            .opacity(this.entered ? 1 : 0)
+            .translate({ y: this.entered ? 0 : 26 })
+            .animation({ duration: 520, curve: Curve.EaseOut, delay: 0 })
+
             Column() {
               ChartCard({ chart: this.chart as Chart })
             }
             .width('100%')
             .opacity(this.entered ? 1 : 0)
             .translate({ y: this.entered ? 0 : 22 })
-            .animation({ duration: 420, curve: Curve.EaseOut, delay: 0 })
+            .animation({ duration: 420, curve: Curve.EaseOut, delay: 80 })
 
             Column() {
               TodayCard({
