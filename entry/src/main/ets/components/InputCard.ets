@@ -57,25 +57,24 @@ export struct InputCard {
   }
 
   private cityIdx(): number {
-    if (this.cur().cityIdx !== undefined) {
-      return this.cur().cityIdx
-    }
-    return 0
+    const c: number | undefined = this.cur().cityIdx
+    return c === undefined ? 0 : c
   }
 
   private patch(changed: BirthPatch): void {
+    const src: BirthInput = this.cur()
     const b: BirthInput = {
-      y: this.cur().y,
-      m: this.cur().m,
-      d: this.cur().d,
-      h: this.cur().h,
-      mi: this.cur().mi,
-      lon: this.cur().lon,
+      y: src.y,
+      m: src.m,
+      d: src.d,
+      h: src.h,
+      mi: src.mi,
+      lon: src.lon,
       tz: src.tz,
-      gender: this.cur().gender,
-      dst: this.cur().dst,
-      unknownHour: this.cur().unknownHour,
-      cityIdx: this.cur().cityIdx
+      gender: src.gender,
+      dst: src.dst,
+      unknownHour: src.unknownHour,
+      cityIdx: src.cityIdx
     }
     if (changed.y !== undefined) { b.y = changed.y }
     if (changed.m !== undefined) { b.m = changed.m }
