@@ -41,15 +41,18 @@ export struct InputCard {
     this.cityIdx = this.initCityIdx
   }
 
-  private push(): void {
+  /** 显式传值上抛。注意：**不能在这里回读 this.xxx** —— ArkUI 的 @State 赋值是批量的，
+   *  在同一个回调里刚赋值就读取会拿到旧值（这正是「界面显示新值、查询用旧值」的根因）。 */
+  private emitAll(dateStr: string, timeStr: string, lonStr: string, gender: string,
+    dst: boolean, unknownHour: boolean, cityIdx: number): void {
     const f: FormData = {
-      dateStr: this.dateStr,
-      timeStr: this.timeStr,
-      lonStr: this.lonStr,
-      gender: this.gender,
-      dst: this.dst,
-      unknownHour: this.unknownHour,
-      cityIdx: this.cityIdx
+      dateStr: dateStr,
+      timeStr: timeStr,
+      lonStr: lonStr,
+      gender: gender,
+      dst: dst,
+      unknownHour: unknownHour,
+      cityIdx: cityIdx
     }
     this.onChange(f)
   }
@@ -78,9 +81,10 @@ export struct InputCard {
       end: new Date(2100, 11, 31),
       selected: new Date(y, m - 1, d),
       onDateAccept: (value: Date) => {
-        this.dateStr = value.getFullYear().toString() + '-' + this.two(value.getMonth() + 1) + '-' +
+        const s: string = value.getFullYear().toString() + '-' + this.two(value.getMonth() + 1) + '-' +
           this.two(value.getDate())
-        this.push()
+        this.dateStr = s
+        this.emitAll(s, this.timeStr, this.lonStr, this.gender, this.dst, this.unknownHour, this.cityIdx)
       }
     })
   }
@@ -101,8 +105,9 @@ export struct InputCard {
       selected: new Date(2020, 0, 1, h, mi),
       useMilitaryTime: true,
       onAccept: (value: TimePickerResult) => {
-        this.timeStr = this.two(value.hour) + ':' + this.two(value.minute)
-        this.push()
+        const s: string = this.two(value.hour) + ':' + this.two(value.minute)
+        this.timeStr = s
+        this.emitAll(this.dateStr, s, this.lonStr, this.gender, this.dst, this.unknownHour, this.cityIdx)
       }
     })
   }
@@ -151,9 +156,10 @@ export struct InputCard {
             .layoutWeight(1)
             .onSelect((index: number) => {
               const c: City = CITIES[index]
+              const lon: string = c.lon.toFixed(2)
               this.cityIdx = index
-              this.lonStr = c.lon.toFixed(2)
-              this.push()
+              this.lonStr = lon
+              this.emitAll(this.dateStr, this.timeStr, lon, this.gender, this.dst, this.unknownHour, index)
             })
           Text('›').fontSize(16).fontColor(Theme.DIM).margin({ left: 8 })
         }
@@ -176,7 +182,7 @@ export struct InputCard {
           .borderRadius(Theme.R_SM)
           .onChange((v: string) => {
             this.lonStr = v
-            this.push()
+            this.emitAll(this.dateStr, this.timeStr, v, this.gender, this.dst, this.unknownHour, this.cityIdx)
           })
         Text('用于换算真太阳时，直接决定时柱与月柱边界').fontSize(11).fontColor(Theme.DIM)
       }
@@ -188,12 +194,12 @@ export struct InputCard {
         this.switchRow('出生时为夏令时（+1 小时）', '中国 1986–1991 年实行', this.dst,
           (v: boolean) => {
             this.dst = v
-            this.push()
+            this.emitAll(this.dateStr, this.timeStr, this.lonStr, this.gender, v, this.unknownHour, this.cityIdx)
           })
         this.switchRow('时辰未知', '未知则不排时柱', this.unknownHour,
           (v: boolean) => {
             this.unknownHour = v
-            this.push()
+            this.emitAll(this.dateStr, this.timeStr, this.lonStr, this.gender, this.dst, v, this.cityIdx)
           })
       }
       .width('100%')
@@ -218,7 +224,7 @@ export struct InputCard {
       .border({ width: 1, color: this.gender === value ? Theme.GOLD : Theme.LINE_SOFT })
       .onClick(() => {
         this.gender = value
-        this.push()
+        this.emitAll(this.dateStr, this.timeStr, this.lonStr, value, this.dst, this.unknownHour, this.cityIdx)
       })
   }
 
@@ -237,7 +243,7 @@ export struct InputCard {
         .borderRadius(Theme.R_SM)
         .onChange((v: string) => {
           this.dateStr = v
-          this.push()
+          this.emitAll(v, this.timeStr, this.lonStr, this.gender, this.dst, this.unknownHour, this.cityIdx)
         })
     }
     .layoutWeight(1)
@@ -259,7 +265,7 @@ export struct InputCard {
         .borderRadius(Theme.R_SM)
         .onChange((v: string) => {
           this.timeStr = v
-          this.push()
+          this.emitAll(this.dateStr, v, this.lonStr, this.gender, this.dst, this.unknownHour, this.cityIdx)
         })
     }
     .layoutWeight(1)
