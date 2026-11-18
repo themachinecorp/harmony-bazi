@@ -72,12 +72,12 @@ struct Index {
       Scroll() {
         Column({ space: 14 }) {
           Column({ space: 6 }) {
-            Text('今 日 运 势')
+            Text('时 辰')
               .fontSize(28).fontWeight(FontWeight.Bold).fontColor(Theme.GOLD)
               .letterSpacing(8)
             Row({ space: 8 }) {
               Row().width(28).height(2).backgroundColor(Theme.RED).borderRadius(1)
-              Text('真太阳时排盘 · 八字 / 大运 / 流年')
+              Text('真太阳时排盘 · 八字 / 大运 / 流年 · 今日运势')
                 .fontSize(12).fontColor(Theme.DIM)
             }
           }
