@@ -70,12 +70,15 @@ struct Index {
     Column() {
       Scroll() {
         Column({ space: 14 }) {
-          Column({ space: 4 }) {
+          Column({ space: 6 }) {
             Text('今 日 运 势')
-              .fontSize(24).fontWeight(FontWeight.Bold).fontColor(Theme.GOLD)
-              .letterSpacing(6)
-            Text('真太阳时排盘 · 八字 / 大运 / 流年')
-              .fontSize(12).fontColor(Theme.DIM)
+              .fontSize(28).fontWeight(FontWeight.Bold).fontColor(Theme.GOLD)
+              .letterSpacing(8)
+            Row({ space: 8 }) {
+              Row().width(28).height(2).backgroundColor(Theme.RED).borderRadius(1)
+              Text('真太阳时排盘 · 八字 / 大运 / 流年')
+                .fontSize(12).fontColor(Theme.DIM)
+            }
           }
           .width('100%')
           .alignItems(HorizontalAlign.Start)
@@ -90,11 +93,13 @@ struct Index {
 
           Button('排 盘')
             .width('100%')
-            .height(46)
+            .height(50)
             .fontSize(17)
-            .fontColor('#FFFFFF')
-            .backgroundColor(Theme.RED)
-            .borderRadius(10)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#FFF6E8')
+            .linearGradient({ angle: 90, colors: Theme.RED_GRADIENT })
+            .borderRadius(14)
+            .shadow({ radius: 18, color: '#33C2410C', offsetY: 6 })
             .onClick(() => { this.compute() })
 
           if (this.hasSaved) {

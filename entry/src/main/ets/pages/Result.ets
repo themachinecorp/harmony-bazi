@@ -58,8 +58,8 @@ struct Result {
       // 顶栏：返回 + 标题 + 生辰摘要
       Row({ space: 10 }) {
         Text('‹')
-          .fontSize(26).fontColor(Theme.GOLD)
-          .width(28)
+          .fontSize(28).fontColor(Theme.GOLD)
+          .width(26)
           .onClick(() => { router.back() })
         Column({ space: 2 }) {
           Text('命盘总览').fontSize(19).fontWeight(FontWeight.Bold).fontColor(Theme.GOLD)
@@ -69,7 +69,8 @@ struct Result {
         .layoutWeight(1)
       }
       .width('100%')
-      .padding({ left: 14, right: 14, top: 14, bottom: 6 })
+      .padding({ left: 14, right: 14, top: 14, bottom: 8 })
+      Row().width('100%').height(1).backgroundColor(Theme.LINE)
 
       if (this.chart !== null && this.fortune !== null) {
         Scroll() {
@@ -89,11 +90,11 @@ struct Result {
 
             Button('返回修改生辰')
               .width('100%')
-              .height(42)
+              .height(46)
               .fontSize(14)
               .fontColor(Theme.GOLD)
               .backgroundColor(Theme.CARD)
-              .borderRadius(10)
+              .borderRadius(14)
               .border({ width: 1, color: Theme.LINE })
               .onClick(() => { router.back() })
           }

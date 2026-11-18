@@ -1,5 +1,5 @@
 /**
- * 生辰录入卡：性别 / 日期 / 时间 / 出生地经度 / 夏令时 / 时辰未知
+ * 生辰录入卡：分段选择 + 按钮式输入行 + 右侧开关
  * 用 @Prop + onChange 回调（不使用 @Link/$$ 语法，跨组件更稳）
  */
 import { BirthInput, CITIES, City, pad2 } from '../model/Bazi'
@@ -21,13 +21,13 @@ interface BirthPatch {
 @Component
 export struct InputCard {
   @Prop birth: BirthInput
+  @State private lonWarn: string = ''
   onChange: (b: BirthInput) => void = (b: BirthInput): void => {}
 
   /** 经度输入的初始文本。用普通字段而非 @State：输入过程中不回显、不与框架抢焦点，
    *  只有切换城市时才刷新（这正是此前「1065522222200001024」脏值的成因）。 */
   private lonInit: string = ''
   private rawLon: string = ''
-  @State private lonWarn: string = ''
 
   aboutToAppear(): void {
     this.lonInit = this.birth.lon.toFixed(2)
@@ -48,14 +48,6 @@ export struct InputCard {
     if (Math.abs(v - this.birth.lon) > 0.0001) {
       this.patch({ lon: v })
     }
-  }
-
-  private cityOptions(): SelectOption[] {
-    const opts: SelectOption[] = []
-    for (let i = 0; i < CITIES.length; i++) {
-      opts.push({ value: CITIES[i].name })
-    }
-    return opts
   }
 
   private cityIdx(): number {
@@ -113,80 +105,52 @@ export struct InputCard {
     })
   }
 
+  private cityOptions(): SelectOption[] {
+    const opts: SelectOption[] = []
+    for (let i = 0; i < CITIES.length; i++) {
+      opts.push({ value: CITIES[i].name })
+    }
+    return opts
+  }
+
   build() {
-    Column({ space: 12 }) {
-      Row({ space: 8 }) {
-        Text('生辰录入')
-          .fontSize(17)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(Theme.GOLD)
-        Blank()
-        Text('真太阳时排盘')
-          .fontSize(12)
-          .fontColor(Theme.DIM)
+    Column({ space: 14 }) {
+      // 性别：分段控件
+      Column({ space: 8 }) {
+        Text('性别').fontSize(12).fontColor(Theme.DIM)
+        Row({ space: 8 }) {
+          this.sex('男', 'm')
+          this.sex('女', 'f')
+          Blank()
+          Text('决定大运顺逆').fontSize(11).fontColor(Theme.DIM)
+        }
+        .width('100%')
       }
       .width('100%')
+      .alignItems(HorizontalAlign.Start)
 
-      // 性别
-      Row({ space: 8 }) {
-        Text('性别').fontSize(13).fontColor(Theme.DIM).width(56)
-        Radio({ value: 'm', group: 'g' })
-          .checked(this.birth.gender === 'm')
-          .onChange((checked: boolean) => {
-            if (checked) {
-              this.patch({ gender: 'm' })
-            }
-          })
-        Text('男').fontSize(14).fontColor(Theme.TEXT)
-        Radio({ value: 'f', group: 'g' })
-          .checked(this.birth.gender === 'f')
-          .onChange((checked: boolean) => {
-            if (checked) {
-              this.patch({ gender: 'f' })
-            }
-          })
-        Text('女').fontSize(14).fontColor(Theme.TEXT)
-        Blank()
-        Text('定大运顺逆').fontSize(12).fontColor(Theme.DIM)
-      }
-      .width('100%')
-
-      // 日期 / 时间
+      // 日期 / 时间：按钮式输入行
       Row({ space: 10 }) {
-        Column({ space: 6 }) {
-          Text('出生日期').fontSize(12).fontColor(Theme.DIM)
-          Text(this.birth.y.toString() + '-' + pad2(this.birth.m) + '-' + pad2(this.birth.d))
-            .fontSize(15).fontColor(Theme.TEXT)
-            .padding({ top: 6, bottom: 6, left: 10, right: 10 })
-            .backgroundColor(Theme.CARD2).borderRadius(8).border({ width: 1, color: Theme.LINE })
-            .onClick(() => this.pickDate())
-        }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-
-        Column({ space: 6 }) {
-          Text('出生时间（钟表时）').fontSize(12).fontColor(Theme.DIM)
-          Text(pad2(this.birth.h) + ':' + pad2(this.birth.mi))
-            .fontSize(15).fontColor(Theme.TEXT)
-            .padding({ top: 6, bottom: 6, left: 10, right: 10 })
-            .backgroundColor(Theme.CARD2).borderRadius(8).border({ width: 1, color: Theme.LINE })
-            .onClick(() => this.pickTime())
-        }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
+        this.pickBox('出生日期',
+          this.birth.y.toString() + '-' + pad2(this.birth.m) + '-' + pad2(this.birth.d),
+          () => { this.pickDate() })
+        this.pickBox('出生时间', pad2(this.birth.h) + ':' + pad2(this.birth.mi),
+          () => { this.pickTime() })
       }
       .width('100%')
 
       // 出生地
-      Row({ space: 10 }) {
-        Column({ space: 6 }) {
-          Text('出生地').fontSize(12).fontColor(Theme.DIM)
+      Column({ space: 8 }) {
+        Text('出生地点').fontSize(12).fontColor(Theme.DIM)
+        Row() {
           Select(this.cityOptions())
             .selected(this.cityIdx())
             .value(CITIES[this.cityIdx()].name)
             .menuBackgroundColor(Theme.CARD)
             .fontColor(Theme.TEXT)
+            .fontSize(15)
             .backgroundColor(Theme.CARD2)
+            .layoutWeight(1)
             .onSelect((index: number) => {
               const c: City = CITIES[index]
               this.lonInit = c.lon.toFixed(2)
@@ -194,45 +158,100 @@ export struct InputCard {
               this.lonWarn = ''
               this.patch({ cityIdx: index, lon: c.lon })
             })
+          Text('›').fontSize(16).fontColor(Theme.DIM).margin({ left: 8 })
         }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-
-        Column({ space: 6 }) {
-          Text('经度（东经，可改）').fontSize(12).fontColor(Theme.DIM)
-          TextInput({ text: this.lonInit })
-            .type(InputType.Number)
-            .fontSize(15).fontColor(Theme.TEXT)
-            .backgroundColor(Theme.CARD2)
-            .onChange((value: string) => { this.rawLon = value })
-            .onBlur(() => { this.commitLon() })
-          if (this.lonWarn.length > 0) {
-            Text(this.lonWarn).fontSize(11).fontColor(Theme.BAD).maxLines(2)
-          }
-        }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
+        .width('100%')
+        .padding({ left: 12, right: 12, top: 12, bottom: 12 })
+        .backgroundColor(Theme.CARD2)
+        .borderRadius(Theme.R_SM)
+        .border({ width: 1, color: Theme.LINE_SOFT })
       }
       .width('100%')
+      .alignItems(HorizontalAlign.Start)
+
+      // 经度
+      Column({ space: 8 }) {
+        Text('出生地经度（东经为正）').fontSize(12).fontColor(Theme.DIM)
+        TextInput({ text: this.lonInit })
+          .type(InputType.Number)
+          .fontSize(15).fontColor(Theme.TEXT)
+          .backgroundColor(Theme.CARD2)
+          .borderRadius(Theme.R_SM)
+          .onChange((value: string) => { this.rawLon = value })
+          .onBlur(() => { this.commitLon() })
+        if (this.lonWarn.length > 0) {
+          Text(this.lonWarn).fontSize(11).fontColor(Theme.BAD).maxLines(2)
+        } else {
+          Text('用于换算真太阳时，直接决定时柱与月柱边界').fontSize(11).fontColor(Theme.DIM)
+        }
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
 
       // 开关
-      Row() {
-        Toggle({ type: ToggleType.Switch, isOn: this.birth.dst })
-          .selectedColor(Theme.RED)
-          .onChange((v: boolean) => { this.patch({ dst: v }) })
-        Text('出生时为夏令时（+1小时）').fontSize(13).fontColor(Theme.TEXT).margin({ left: 8 })
-        Blank()
-        Toggle({ type: ToggleType.Switch, isOn: this.birth.unknownHour })
-          .selectedColor(Theme.RED)
-          .onChange((v: boolean) => { this.patch({ unknownHour: v }) })
-        Text('时辰未知').fontSize(13).fontColor(Theme.TEXT).margin({ left: 8 })
+      Column({ space: 0 }) {
+        this.switchRow('出生时为夏令时（+1 小时）', '中国 1986–1991 年实行', this.birth.dst,
+          (v: boolean) => { this.patch({ dst: v }) })
+        this.switchRow('时辰未知', '未知则不排时柱', this.birth.unknownHour,
+          (v: boolean) => { this.patch({ unknownHour: v }) })
       }
       .width('100%')
     }
     .width('100%')
-    .padding(14)
+    .padding(16)
     .backgroundColor(Theme.CARD)
-    .borderRadius(14)
+    .borderRadius(Theme.R_CARD)
     .border({ width: 1, color: Theme.LINE })
+  }
+
+  @Builder
+  sex(label: string, value: string) {
+    Text(label)
+      .fontSize(14)
+      .fontColor(this.birth.gender === value ? '#1A1206' : Theme.TEXT2)
+      .width(76)
+      .height(36)
+      .textAlign(TextAlign.Center)
+      .backgroundColor(this.birth.gender === value ? Theme.GOLD : Theme.CARD2)
+      .borderRadius(Theme.R_PILL)
+      .border({ width: 1, color: this.birth.gender === value ? Theme.GOLD : Theme.LINE_SOFT })
+      .onClick(() => { this.patch({ gender: value }) })
+  }
+
+  @Builder
+  pickBox(label: string, value: string, action: () => void) {
+    Column({ space: 6 }) {
+      Text(label).fontSize(12).fontColor(Theme.DIM)
+      Row({ space: 8 }) {
+        Text(value).fontSize(15).fontColor(Theme.TEXT).layoutWeight(1)
+        Text('›').fontSize(16).fontColor(Theme.DIM)
+      }
+      .width('100%')
+      .padding({ left: 12, right: 12, top: 11, bottom: 11 })
+      .backgroundColor(Theme.CARD2)
+      .borderRadius(Theme.R_SM)
+      .border({ width: 1, color: Theme.LINE_SOFT })
+      .onClick(() => { action() })
+    }
+    .layoutWeight(1)
+    .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  switchRow(title: string, sub: string, on: boolean, cb: (v: boolean) => void) {
+    Row({ space: 10 }) {
+      Column({ space: 2 }) {
+        Text(title).fontSize(13).fontColor(Theme.TEXT)
+        Text(sub).fontSize(11).fontColor(Theme.DIM)
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
+      Toggle({ type: ToggleType.Switch, isOn: on })
+        .selectedColor(Theme.RED)
+        .onChange((v: boolean) => { cb(v) })
+    }
+    .width('100%')
+    .padding({ top: 12, bottom: 12 })
+    .border({ width: { bottom: 1 }, color: Theme.LINE_SOFT })
   }
 }

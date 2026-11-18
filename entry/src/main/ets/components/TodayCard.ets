@@ -1,7 +1,7 @@
 /**
- * 今日概览卡：今日干支、综合评分、宜忌、解读
+ * 今日运势卡：环形评分 + 宜忌双列 + 逐条解读
  */
-import { Chart, Fortune, jdToLocalStr } from '../model/Bazi'
+import { Chart, Fortune } from '../model/Bazi'
 import { Theme } from '../model/Theme'
 
 @Component
@@ -20,90 +20,91 @@ export struct TodayCard {
     return Theme.BAD
   }
 
+  private pillars(): string[] {
+    const t: string = this.fortune.today.year.name + ' ' + this.fortune.today.month.name + ' ' +
+      this.fortune.today.day.name + ' ' + this.fortune.today.hour.name
+    return t.split(' ')
+  }
+
   build() {
-    Column({ space: 14 }) {
-      Row() {
-        Text('今日概览')
-          .fontSize(17).fontWeight(FontWeight.Bold).fontColor(Theme.GOLD)
+    Column({ space: 16 }) {
+      // 标题行
+      Row({ space: 8 }) {
+        Text('今日运势').fontSize(15).fontWeight(FontWeight.Bold).fontColor(Theme.TEXT)
         Blank()
-        Text(this.todayText).fontSize(12).fontColor(Theme.DIM)
+        Text(this.todayText).fontSize(11).fontColor(Theme.DIM)
       }
       .width('100%')
 
+      // 今日干支
       Column({ space: 4 }) {
-        Text(this.fortune.today.year.name + ' ' + this.fortune.today.month.name + ' ' +
-        this.fortune.today.day.name + ' ' + this.fortune.today.hour.name)
-          .fontSize(20).fontColor(Theme.TEXT).fontWeight(FontWeight.Medium)
-        Text('↑ 今日干支（今天这一天的，不是你的命盘）')
+        Row({ space: 10 }) {
+          ForEach(this.pillars(), (s: string) => {
+            Text(s).fontSize(19).fontWeight(FontWeight.Medium).fontColor(Theme.TEXT)
+          }, (s: string) => s)
+        }
+        Text('今日干支（今天这一天的，不是你的命盘）')
           .fontSize(10).fontColor(Theme.DIM)
-        Text('干支纪年 ' + this.fortune.today.solarYear.toString() + ' 年　节令：' +
-        this.fortune.today.jiePrev.name + ' 后 · ' + this.fortune.today.jieNext.name + ' 前')
-          .fontSize(12).fontColor(Theme.DIM)
-        Text('当前大运 ' + (this.fortune.curYunName.length > 0 ?
-          this.fortune.curYunName + '　' + this.fortune.curYunFrom.toString() + '–' + this.fortune.curYunTo.toString() + ' 岁' : '—'))
-          .fontSize(12).fontColor(Theme.DIM)
       }
       .width('100%')
       .alignItems(HorizontalAlign.Start)
 
-      // 评分
-      Row({ space: 14 }) {
-        Text(this.fortune.score.toString())
-          .fontSize(52)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(this.scoreColor())
-        Column({ space: 4 }) {
+      // 评分块：大数字 + 环形进度 + 元信息
+      Row({ space: 16 }) {
+        Column({ space: 2 }) {
+          Text(this.fortune.score.toString())
+            .fontSize(50).fontWeight(FontWeight.Bold).fontColor(this.scoreColor())
           Text(this.fortune.label)
-            .fontSize(20).fontColor(this.scoreColor()).fontWeight(FontWeight.Medium)
-          Progress({ value: this.fortune.score, total: 100, type: ProgressType.Linear })
-            .width('100%')
-            .height(6)
-            .color(this.scoreColor())
-            .backgroundColor(Theme.CARD2)
+            .fontSize(15).fontColor(this.scoreColor()).fontWeight(FontWeight.Medium)
+        }
+        .alignItems(HorizontalAlign.Start)
+
+        Progress({ value: this.fortune.score, total: 100, type: ProgressType.Ring })
+          .width(70).height(70)
+          .color(this.scoreColor())
+          .style({ strokeWidth: 5 })
+
+        Column({ space: 5 }) {
+          this.meta('大运', this.fortune.curYunName.length > 0 ?
+          this.fortune.curYunName + ' ' + this.fortune.curYunFrom.toFixed(1) + '–' +
+          this.fortune.curYunTo.toFixed(1) + '岁' : '—')
+          this.meta('节令', this.fortune.today.jiePrev.name + '后 · ' + this.fortune.today.jieNext.name + '前')
+          this.meta('流年', this.fortune.today.year.name + ' ' + this.fortune.today.year.god)
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
       }
       .width('100%')
-
-      // 标签
-      Flex({ wrap: FlexWrap.Wrap }) {
-        Text('日主 ' + this.chart.day.ganChar + '（' + this.chart.dayWx + '）')
-          .fontSize(11).fontColor(Theme.DIM).padding({ left: 8, right: 8, top: 4, bottom: 4 })
-          .backgroundColor(Theme.CARD2).borderRadius(10).border({ width: 1, color: Theme.LINE }).margin(4)
-        Text(this.chart.strength.stateText)
-          .fontSize(11).fontColor(Theme.DIM).padding({ left: 8, right: 8, top: 4, bottom: 4 })
-          .backgroundColor(Theme.CARD2).borderRadius(10).border({ width: 1, color: Theme.LINE }).margin(4)
-        Text('喜 ' + this.chart.strength.favText)
-          .fontSize(11).fontColor(Theme.GOLD).padding({ left: 8, right: 8, top: 4, bottom: 4 })
-          .backgroundColor(Theme.CARD2).borderRadius(10).border({ width: 1, color: Theme.LINE }).margin(4)
-        Text('忌 ' + this.chart.strength.unfavText)
-          .fontSize(11).fontColor(Theme.DIM).padding({ left: 8, right: 8, top: 4, bottom: 4 })
-          .backgroundColor(Theme.CARD2).borderRadius(10).border({ width: 1, color: Theme.LINE }).margin(4)
-        Text('流年 ' + this.fortune.today.year.name + ' ' + this.fortune.today.year.god)
-          .fontSize(11).fontColor(Theme.DIM).padding({ left: 8, right: 8, top: 4, bottom: 4 })
-          .backgroundColor(Theme.CARD2).borderRadius(10).border({ width: 1, color: Theme.LINE }).margin(4)
-        Text('今日 ' + this.fortune.today.day.name + ' ' + this.fortune.today.day.god)
-          .fontSize(11).fontColor(Theme.DIM).padding({ left: 8, right: 8, top: 4, bottom: 4 })
-          .backgroundColor(Theme.CARD2).borderRadius(10).border({ width: 1, color: Theme.LINE }).margin(4)
-      }
-      .width('100%')
+      .padding(14)
+      .backgroundColor(Theme.CARD2)
+      .borderRadius(Theme.R_SM)
+      .border({ width: 1, color: Theme.LINE_SOFT })
 
       // 宜 / 忌
       Row({ space: 12 }) {
-        Column({ space: 6 }) {
-          Text('宜').fontSize(14).fontColor(Theme.OK).fontWeight(FontWeight.Medium)
+        Column({ space: 7 }) {
+          Text('宜').fontSize(13).fontWeight(FontWeight.Bold).fontColor(Theme.OK)
           ForEach(this.fortune.yi, (x: string) => {
-            Text('· ' + x).fontSize(12).fontColor(Theme.TEXT)
+            Row({ space: 6 }) {
+              Text('·').fontSize(11).fontColor(Theme.OK)
+              Text(x).fontSize(12).fontColor(Theme.TEXT2).layoutWeight(1)
+            }
+            .width('100%')
+            .alignItems(VerticalAlign.Top)
           }, (x: string) => x)
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
 
-        Column({ space: 6 }) {
-          Text('忌').fontSize(14).fontColor(Theme.BAD).fontWeight(FontWeight.Medium)
+        Column({ space: 7 }) {
+          Text('忌').fontSize(13).fontWeight(FontWeight.Bold).fontColor(Theme.BAD)
           ForEach(this.fortune.ji, (x: string) => {
-            Text('· ' + x).fontSize(12).fontColor(Theme.TEXT)
+            Row({ space: 6 }) {
+              Text('·').fontSize(11).fontColor(Theme.BAD)
+              Text(x).fontSize(12).fontColor(Theme.TEXT2).layoutWeight(1)
+            }
+            .width('100%')
+            .alignItems(VerticalAlign.Top)
           }, (x: string) => x)
         }
         .alignItems(HorizontalAlign.Start)
@@ -112,19 +113,28 @@ export struct TodayCard {
       .width('100%')
 
       // 解读
-      Column({ space: 4 }) {
-        Text('今日解读').fontSize(14).fontColor(Theme.GOLD).fontWeight(FontWeight.Medium)
+      Column({ space: 7 }) {
+        Text('今日解读').fontSize(13).fontWeight(FontWeight.Bold).fontColor(Theme.GOLD)
         ForEach(this.fortune.notes, (x: string) => {
-          Text('· ' + x).fontSize(12).fontColor(Theme.DIM)
+          Text(x).fontSize(12).fontColor(Theme.DIM).lineHeight(19)
         }, (x: string) => x)
       }
       .width('100%')
       .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
-    .padding(14)
+    .padding(16)
     .backgroundColor(Theme.CARD)
-    .borderRadius(14)
+    .borderRadius(Theme.R_CARD)
     .border({ width: 1, color: Theme.LINE })
+  }
+
+  @Builder
+  meta(k: string, v: string) {
+    Row({ space: 6 }) {
+      Text(k).fontSize(11).fontColor(Theme.DIM)
+      Text(v).fontSize(11).fontColor(Theme.TEXT2)
+    }
+    .width('100%')
   }
 }
