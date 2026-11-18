@@ -52,7 +52,7 @@ export struct ChartCard {
         this.cell('', false)
         ForEach(this.pillars(), (p: Pillar) => {
           this.cell(p.name, true)
-        }, (p: Pillar) => p.name)
+        }, (p: Pillar, idx: number) => idx.toString())
       }
       .width('100%')
 
@@ -60,7 +60,7 @@ export struct ChartCard {
         this.cell('', false)
         ForEach(this.pillars(), (p: Pillar) => {
           this.cell(p.god, false)
-        }, (p: Pillar) => p.god)
+        }, (p: Pillar, idx: number) => idx.toString())
       }
       .width('100%')
 
@@ -68,7 +68,7 @@ export struct ChartCard {
         this.cell('', false)
         ForEach(this.pillars(), (p: Pillar) => {
           this.cell(p.wx + ' / ' + p.zwx, false)
-        }, (p: Pillar) => p.zwx)
+        }, (p: Pillar, idx: number) => idx.toString())
       }
       .width('100%')
 
@@ -76,7 +76,7 @@ export struct ChartCard {
         this.cell('', false)
         ForEach(this.pillars(), (p: Pillar) => {
           this.cell(this.hiddenText(p), false)
-        }, (p: Pillar) => p.zwx)
+        }, (p: Pillar, idx: number) => idx.toString())
       }
       .width('100%')
       .alignItems(VerticalAlign.Top)
