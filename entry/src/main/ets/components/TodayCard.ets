@@ -10,6 +10,27 @@ export struct TodayCard {
   @Prop chart: Chart
   @Prop todayText: string
 
+  /** 分数从 0 涨到目标值（配合环形进度一起动） */
+  @State private shown: number = 0
+  @State private pulse: boolean = false
+
+  aboutToAppear(): void {
+    const target: number = this.fortune.score
+    const steps: number = 18
+    let i: number = 0
+    const tick: () => void = (): void => {
+      i += 1
+      this.shown = target * i / steps
+      if (i < steps) {
+        setTimeout(tick, 26)
+      } else {
+        this.shown = target
+      }
+    }
+    setTimeout(tick, 120)
+    setTimeout(() => { this.pulse = true }, 200)
+  }
+
   private scoreColor(): string {
     if (this.fortune.score >= 72) {
       return Theme.OK
@@ -52,17 +73,20 @@ export struct TodayCard {
       // 评分块：大数字 + 环形进度 + 元信息
       Row({ space: 16 }) {
         Column({ space: 2 }) {
-          Text(this.fortune.score.toString())
-            .fontSize(50).fontWeight(FontWeight.Bold).fontColor(this.scoreColor())
+          Text(Math.round(this.shown).toString())
+            .fontSize(52).fontWeight(FontWeight.Bold).fontColor(this.scoreColor())
           Text(this.fortune.label)
             .fontSize(15).fontColor(this.scoreColor()).fontWeight(FontWeight.Medium)
         }
         .alignItems(HorizontalAlign.Start)
 
-        Progress({ value: this.fortune.score, total: 100, type: ProgressType.Ring })
-          .width(70).height(70)
+        Progress({ value: this.shown, total: 100, type: ProgressType.Ring })
+          .width(74).height(74)
           .color(this.scoreColor())
-          .style({ strokeWidth: 5 })
+          .style({ strokeWidth: 6 })
+          .shadow({ radius: 14, color: this.scoreColor(), offsetY: 0 })
+          .opacity(this.pulse ? 1 : 0.55)
+          .animation({ duration: 1500, curve: Curve.EaseInOut, iterations: -1, playMode: PlayMode.Alternate })
 
         Column({ space: 5 }) {
           this.meta('大运', this.fortune.curYunName.length > 0 ?

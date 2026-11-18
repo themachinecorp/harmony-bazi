@@ -15,6 +15,8 @@ struct Result {
   @State private fortune: Fortune | null = null
   @State private years: YearItem[] = []
   @State private summary: string = ''
+  /** 入场动画开关 */
+  @State private entered: boolean = false
 
   aboutToAppear(): void {
     this.load()
@@ -59,6 +61,7 @@ struct Result {
     this.years = yearList(c, spec.y - 2, spec.y + 5)
     this.summary = fd.dateStr + ' ' + fd.timeStr + '　经度 ' + fd.lonStr + '°E　真太阳时 ' +
       c.solar.trueStr.substring(0, 16)
+    setTimeout(() => { this.entered = true }, 40)
   }
 
   /** 返回录入页：先打标记，让录入页回填最近一次查询的信息 */
@@ -97,17 +100,37 @@ struct Result {
         Scroll() {
           Column({ space: 14 }) {
             // 命盘在前：先看自己的八字，再看今天运势（避免把「今日干支」当成命盘）
-            ChartCard({ chart: this.chart as Chart })
-            TodayCard({
-              fortune: this.fortune as Fortune,
-              chart: this.chart as Chart,
-              todayText: this.todayText()
-            })
-            YunCard({
-              chart: this.chart as Chart,
-              years: this.years,
-              currentYear: beijingNow().y
-            })
+            Column() {
+              ChartCard({ chart: this.chart as Chart })
+            }
+            .width('100%')
+            .opacity(this.entered ? 1 : 0)
+            .translate({ y: this.entered ? 0 : 22 })
+            .animation({ duration: 420, curve: Curve.EaseOut, delay: 0 })
+
+            Column() {
+              TodayCard({
+                fortune: this.fortune as Fortune,
+                chart: this.chart as Chart,
+                todayText: this.todayText()
+              })
+            }
+            .width('100%')
+            .opacity(this.entered ? 1 : 0)
+            .translate({ y: this.entered ? 0 : 22 })
+            .animation({ duration: 420, curve: Curve.EaseOut, delay: 90 })
+
+            Column() {
+              YunCard({
+                chart: this.chart as Chart,
+                years: this.years,
+                currentYear: beijingNow().y
+              })
+            }
+            .width('100%')
+            .opacity(this.entered ? 1 : 0)
+            .translate({ y: this.entered ? 0 : 22 })
+            .animation({ duration: 420, curve: Curve.EaseOut, delay: 180 })
 
             Button('返回修改生辰')
               .width('100%')

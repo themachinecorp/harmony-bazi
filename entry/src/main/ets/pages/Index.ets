@@ -20,6 +20,7 @@ struct Index {
   }
   @State private hasSaved: boolean = false
   @State private loaded: boolean = false
+  @State private entered: boolean = false
 
   aboutToAppear(): void {
     this.restore()
@@ -38,6 +39,7 @@ struct Index {
       birthStore.setDraft(o)
     }
     this.loaded = true
+    setTimeout(() => { this.entered = true }, 40)
   }
 
   onFormChange(f: FormData): void {
@@ -98,16 +100,22 @@ struct Index {
           .margin({ bottom: 4 })
 
           if (this.loaded) {
-            InputCard({
-              initDate: this.form.dateStr,
-              initTime: this.form.timeStr,
-              initLon: this.form.lonStr,
-              initGender: this.form.gender,
-              initDst: this.form.dst,
-              initUnknownHour: this.form.unknownHour,
-              initCityIdx: this.form.cityIdx,
-              onChange: (f: FormData) => { this.onFormChange(f) }
-            })
+            Column() {
+              InputCard({
+                initDate: this.form.dateStr,
+                initTime: this.form.timeStr,
+                initLon: this.form.lonStr,
+                initGender: this.form.gender,
+                initDst: this.form.dst,
+                initUnknownHour: this.form.unknownHour,
+                initCityIdx: this.form.cityIdx,
+                onChange: (f: FormData) => { this.onFormChange(f) }
+              })
+            }
+            .width('100%')
+            .opacity(this.entered ? 1 : 0)
+            .translate({ y: this.entered ? 0 : 22 })
+            .animation({ duration: 420, curve: Curve.EaseOut, delay: 40 })
           }
 
           Button('排 盘')
@@ -119,11 +127,16 @@ struct Index {
             .linearGradient({ angle: 90, colors: Theme.RED_GRADIENT })
             .borderRadius(14)
             .shadow({ radius: 18, color: '#33C2410C', offsetY: 6 })
+            .opacity(this.entered ? 1 : 0)
+            .translate({ y: this.entered ? 0 : 18 })
+            .animation({ duration: 420, curve: Curve.EaseOut, delay: 120 })
             .onClick(() => { this.compute() })
 
           Text(this.formSummary())
             .fontSize(11).fontColor(Theme.DIM)
             .width('100%')
+            .opacity(this.entered ? 1 : 0)
+            .animation({ duration: 420, curve: Curve.EaseOut, delay: 200 })
 
           if (this.hasSaved) {
             Button('查看上次结果')

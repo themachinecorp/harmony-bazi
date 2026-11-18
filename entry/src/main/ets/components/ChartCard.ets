@@ -7,6 +7,8 @@ import { Theme } from '../model/Theme'
 @Component
 export struct ChartCard {
   @Prop chart: Chart
+  /** 点柱子看藏干：-1 未选 */
+  @State private sel: number = -1
 
   private pillars(): Pillar[] {
     return [this.chart.year, this.chart.month, this.chart.day, this.chart.hour]
@@ -45,9 +47,25 @@ export struct ChartCard {
           }
           .layoutWeight(1)
           .padding({ top: 10, bottom: 10 })
-          .backgroundColor(idx === 2 ? '#1B1410' : Theme.CARD2)
+          .backgroundColor(this.sel === idx ? '#221A10' : (idx === 2 ? '#1B1410' : Theme.CARD2))
           .borderRadius(Theme.R_SM)
-          .border({ width: 1, color: idx === 2 ? Theme.RED_SOFT : Theme.LINE_SOFT })
+          .border({
+            width: this.sel === idx ? 1.6 : 1,
+            color: this.sel === idx ? Theme.GOLD : (idx === 2 ? Theme.RED_SOFT : Theme.LINE_SOFT)
+          })
+          .scale({ x: this.sel === idx ? 1.05 : 1, y: this.sel === idx ? 1.05 : 1 })
+          .shadow({
+            radius: this.sel === idx ? 16 : 0,
+            color: '#66D9B36C',
+            offsetY: 4
+          })
+          .animation({ duration: 200, curve: Curve.EaseOut })
+          .onClick(() => {
+            this.sel = this.sel === idx ? -1 : idx
+            this.getUIContext().getPromptAction().showToast({
+              message: '第 ' + (idx + 1) + ' 柱：' + p.name + '（' + p.god + '）'
+            })
+          })
           .alignItems(HorizontalAlign.Center)
         }, (p: Pillar, idx: number) => idx.toString())
       }
@@ -61,6 +79,20 @@ export struct ChartCard {
         this.pill('忌 ' + this.chart.strength.unfavText, Theme.DIM, Theme.LINE)
       }
       .width('100%')
+
+      // 点柱子后的明细
+      if (this.sel >= 0) {
+        Row({ space: 8 }) {
+          Text(this.labels()[this.sel] + ' 藏干').fontSize(11).fontColor(Theme.GOLD)
+          Text(this.hiddenText(this.pillars()[this.sel])).fontSize(11).fontColor(Theme.TEXT2)
+        }
+        .width('100%')
+        .padding({ top: 8, bottom: 8, left: 10, right: 10 })
+        .backgroundColor('#1D1609')
+        .borderRadius(Theme.R_SM)
+        .border({ width: 1, color: Theme.GOLD_DIM })
+        .animation({ duration: 220, curve: Curve.EaseOut })
+      }
 
       // 明细行
       Column({ space: 0 }) {
