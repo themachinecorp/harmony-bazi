@@ -245,6 +245,104 @@
    * o = {y,m,d,h,mi, lon, tz=8, dst=false, gender:'m'|'f', unknownHour=false}
    */
   /** 经度脏值防御：非有限或越界按 120°E 处理，避免真太阳时溢出成年份级垃圾 */
+  /* ---------- 五行喜忌与补益指南 ---------- */
+  var WX_ORDER = ['木', '火', '土', '金', '水'];
+
+  /** 生我者（印） */
+  function producedBy(dayWx) {
+    for (var i = 0; i < WX_ORDER.length; i++) if (SHENG[WX_ORDER[i]] === dayWx) return WX_ORDER[i];
+    return dayWx;
+  }
+  /** 克我者（官杀） */
+  function controlledBy(dayWx) {
+    for (var i = 0; i < WX_ORDER.length; i++) if (KE[WX_ORDER[i]] === dayWx) return WX_ORDER[i];
+    return dayWx;
+  }
+  /** 十神组 → 五行 */
+  function godGroupToWx(group, dayWx) {
+    if (group === '印') return producedBy(dayWx);
+    if (group === '比') return dayWx;
+    if (group === '食') return SHENG[dayWx];
+    if (group === '财') return KE[dayWx];
+    if (group === '官') return controlledBy(dayWx);
+    return dayWx;
+  }
+
+  /**
+   * 由喜用神推出「该补的五行」与「该忌的五行」
+   */
+  function wuxingPlan(strength, dayWx) {
+    var fav = [], unfav = [], i, g, w;
+    for (i = 0; i < strength.fav.length; i++) {
+      w = godGroupToWx(strength.fav[i], dayWx);
+      if (fav.indexOf(w) < 0) fav.push(w);
+    }
+    for (i = 0; i < strength.unfav.length; i++) {
+      w = godGroupToWx(strength.unfav[i], dayWx);
+      if (unfav.indexOf(w) < 0) unfav.push(w);
+    }
+    fav.sort(function (a, b) { return WX_ORDER.indexOf(a) - WX_ORDER.indexOf(b); });
+    unfav.sort(function (a, b) { return WX_ORDER.indexOf(a) - WX_ORDER.indexOf(b); });
+    return {
+      favWx: fav, unfavWx: unfav,
+      favText: fav.join('、'), unfavText: unfav.join('、'),
+      favGods: strength.favText, unfavGods: strength.unfavText
+    };
+  }
+
+  /** 五行调补指南：颜色 / 方位 / 数字 / 物品 / 饮食 / 宜 / 忌 */
+  var WX_GUIDE = {
+    '木': {
+      color: '青、绿、竹青、橄榄绿', dir: '东方', num: '3、8',
+      item: '绿植盆栽、原木与竹制品、纸质书、棉麻织物',
+      diet: '深绿叶菜、芹菜、青瓜、绿茶、青梅',
+      career: '教育、出版、文创、林业、医护',
+      do: '多做规划与学习、早起、伸展运动、多与草木相处',
+      dont: '忌熬夜耗木、忌怒火上头、忌大片红色与金属饰品',
+      tip: '木主生发，宜静宜学，忌郁怒'
+    },
+    '火': {
+      color: '红、橙、紫、酒红、暖粉', dir: '南方', num: '2、7',
+      item: '暖光台灯、香薰炉、暖色挂画、红色饰物',
+      diet: '羊肉、辣椒、荔枝、红枣、暖汤',
+      career: '能源、演艺、餐饮、直播、推广',
+      do: '多晒太阳、适度运动、热情社交、主动表达',
+      dont: '忌过多黑色与冷水、忌过度克制、忌长期独处',
+      tip: '火主礼明，宜动宜热，忌抑郁'
+    },
+    '土': {
+      color: '黄、棕、卡其、米色、咖啡', dir: '中西东北方', num: '5、0',
+      item: '陶瓷器、玉石、水晶、方形摆件、砂器',
+      diet: '小米、山药、南瓜、牛肉、豆腐、薯类',
+      career: '地产、建筑、农业、中介、仓储',
+      do: '稳扎稳打、做好理财、规律作息、积少成多',
+      dont: '忌频繁变动、忌高杠杆冒险、忌四处奔波',
+      tip: '土主承载，宜稳宜藏，忌散漫'
+    },
+    '金': {
+      color: '白、金、银、月白、浅灰', dir: '西方、西北方', num: '4、9',
+      item: '金属饰品、金属笔、机械表、圆形摆件、白色家电',
+      diet: '大米、山药、梨、白萝卜、菌菇、白色食材',
+      career: '金融、机械、军警、律师、外科、五金',
+      do: '断舍离、立规矩、做减法、断难处',
+      dont: '忌过多红色、忌拖泥带水、忌优柔寡断',
+      tip: '金主肃杀，宜决宜断，忌迟疑'
+    },
+    '水': {
+      color: '黑、深蓝、藏青、灰蓝', dir: '北方', num: '1、6',
+      item: '流水摆件、鱼缸、玻璃器皿、黑色皮具、圆珠',
+      diet: '水产、汤羹、黑豆、海带、菌菇、浆果',
+      career: '贸易、物流、旅游、传播、水产、咨询',
+      do: '多喝水、早睡、灵活周旋、宽厚待人',
+      dont: '忌过度辛劳、忌久坐不动、忌与人硬顶',
+      tip: '水主智巧，宜柔宜动，忌枯竭'
+    }
+  };
+
+  function wxGuide(wx) {
+    return WX_GUIDE[wx] || { color: '—', dir: '—', num: '—', item: '—', diet: '—', career: '—', do: '—', dont: '—', tip: '—' };
+  }
+
   function safeLon(lon) {
     var v = Number(lon);
     if (!isFinite(v) || v < -180 || v > 180) return 120;
@@ -629,6 +727,8 @@
     sunLon: sunLon, eqOfTime: eqOfTime, termsOfYear: termsOfYear, jieOfYear: jieOfYear,
     jdFromUTC: jdFromUTC, jdnOf: jdnOf, jdToCal: jdToCal, jdToLocalStr: jdToLocalStr,
     safeLon: safeLon,
+    wuxingPlan: wuxingPlan,
+    wxGuide: wxGuide,
     gzName: gzName, gzIndex: gzIndex, tenGod: tenGod, godGroup: godGroup,
     solarTime: solarTime, buildChart: buildChart, todayPillars: todayPillars,
     dailyFortune: dailyFortune, branchRel: branchRel, yearList: yearList, selftest: selftest,
