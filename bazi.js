@@ -479,7 +479,7 @@
 
   /** 合化/三会/三合/六合 修正 */
   function combineMods(pillars) {
-    var z = [pillars.year.zhi, pillars.month.zhi, pillars.day.zhi, pillars.hour.zhi];
+    var z = [pillars.year.zhi, pillars.month.zhi, pillars.day.zhi, pillars.hour ? pillars.hour.zhi : -1];
     var mods = {};
     var notes = [];
     function add(wx, v, note) {
@@ -524,8 +524,9 @@
     });
 
     var deDi = 0, deDiList = [];
-    var zhis = [pillars.year.zhi, pillars.month.zhi, pillars.day.zhi, pillars.hour.zhi];
+    var zhis = [pillars.year.zhi, pillars.month.zhi, pillars.day.zhi, pillars.hour ? pillars.hour.zhi : -1];
     zhis.forEach(function (zi, idx) {
+      if (zi < 0) return;
       var zwx = ZHI_WX[zi];
       var v = 0;
       if (zwx === dwx) v = 1.0;                       // 同我：比劫得地
@@ -538,7 +539,8 @@
     });
 
     var deShi = 0, deShiList = [];
-    [pillars.year.gan, pillars.month.gan, pillars.hour.gan].forEach(function (gi) {
+    [pillars.year.gan, pillars.month.gan, pillars.hour ? pillars.hour.gan : -1].forEach(function (gi) {
+      if (gi < 0) return;
       var wx = GAN_WX[gi], v = 0;
       if (wx === dwx) v = 0.8;                         // 比劫
       else if (SHENG[wx] === dwx) v = 0.5;             // 印
@@ -584,7 +586,8 @@
     if (LUS[dg] === mzi) return { name: '建禄格', type: 'normal', basis: dg + '禄在' + ZHI[mzi] };
     if (RENS[dg] === mzi) return { name: '月劫(羊刃)格', type: 'normal', basis: dg + '刃在' + ZHI[mzi] };
 
-    var gans = [pillars.year.gan, pillars.month.gan, pillars.day.gan, pillars.hour.gan].map(function (i) { return GAN[i]; });
+    var gans = [pillars.year.gan, pillars.month.gan, pillars.day.gan].map(function (i) { return GAN[i]; });
+    if (pillars.hour) gans.push(GAN[pillars.hour.gan]);
     var found = null;
     for (var i = 0; i < hidden.length; i++) {
       var g = hidden[i];
@@ -611,7 +614,8 @@
   function followCheck(pillars, ws) {
     var dg = pillars.day.gan;
     var dwx = GAN_WX[dg];
-    var zhis = [pillars.year.zhi, pillars.month.zhi, pillars.day.zhi, pillars.hour.zhi];
+    var zhis = [pillars.year.zhi, pillars.month.zhi, pillars.day.zhi, pillars.hour ? pillars.hour.zhi : -1];
+    zhis = zhis.filter(function (z) { return z >= 0; });
     var hasRoot = zhis.some(function (zi) { return ZHI_WX[zi] === dwx; });
     var hasYin = zhis.some(function (zi) { return SHENG[ZHI_WX[zi]] === dwx; });
     if (ws.score <= -3.2 && !hasRoot && !hasYin) {
@@ -660,6 +664,7 @@
       // 从格：顺从旺势
       var cnt = {};
       [pillars.year, pillars.month, pillars.day, pillars.hour].forEach(function (p) {
+        if (!p) return;
         cnt[p.wx] = (cnt[p.wx] || 0) + 1; cnt[p.zwx] = (cnt[p.zwx] || 0) + 0.8;
         p.hidden.forEach(function (h, i) { cnt[h.wx] = (cnt[h.wx] || 0) + (i === 0 ? 0.8 : 0.4); });
       });
@@ -702,6 +707,7 @@
       });
       var cnt2 = {};
       [pillars.year, pillars.month, pillars.day, pillars.hour].forEach(function (p) {
+        if (!p) return;
         cnt2[p.wx] = (cnt2[p.wx] || 0) + 1; cnt2[p.zwx] = (cnt2[p.zwx] || 0) + 0.8;
       });
       favWx = baseFav.slice();

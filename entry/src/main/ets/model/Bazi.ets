@@ -701,6 +701,9 @@ function computeStrength(year: Pillar, month: Pillar, day: Pillar, hour: Pillar,
   let same: number = 0
   let other: number = 0
   const addGan: (g: number, w: number) => void = (g: number, w: number): void => {
+    if (g < 0) {
+      return
+    }
     const grp: string = godGroup(tenGod(dayGan, g))
     if (grp === '印' || grp === '比') {
       same += w
@@ -713,6 +716,9 @@ function computeStrength(year: Pillar, month: Pillar, day: Pillar, hour: Pillar,
   addGan(day.gan, 1)
   addGan(hour.gan, 1)
   const addZhi: (z: number, w: number) => void = (z: number, w: number): void => {
+    if (z < 0) {
+      return
+    }
     const hidden: string[] = HIDDEN[z]
     for (let i = 0; i < hidden.length; i++) {
       const grp: string = godGroup(tenGod(dayGan, GAN.indexOf(hidden[i])))
@@ -1113,7 +1119,10 @@ export function geJuOf(p: PillarSet): GeJu {
   if (ren !== undefined && ren === mzi) {
     return { name: '月劫(羊刃)格', basis: dg + '刃在' + ZHI[mzi] }
   }
-  const gans: string[] = [GAN[p.year.gan], GAN[p.month.gan], GAN[p.day.gan], GAN[p.hour.gan]]
+  const gans: string[] = [GAN[p.year.gan], GAN[p.month.gan], GAN[p.day.gan]]
+  if (p.hour.gan >= 0) {
+    gans.push(GAN[p.hour.gan])
+  }
   const hidden: string[] = HIDDEN[mzi]
   let foundGan: string = ''
   let foundGod: string = ''
