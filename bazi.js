@@ -440,6 +440,29 @@
     if (state === 'strong') { if (g === '食') return 1; if (g === '财') return 0.8; if (g === '官') return 0.5; if (g === '印') return -0.7; return -0.4; }
     if (g === '财' || g === '官') return 0.5; if (g === '食') return 0.3; return 0;
   }
+  var CHANGSHENG = ['长生', '沐浴', '冠带', '临官', '帝旺', '衰', '病', '死', '墓', '绝', '胎', '养'];
+  var CS_START = [11, 6, 2, 9, 2, 9, 5, 0, 8, 3];   // 甲乙丙丁戊己庚辛壬癸 的长生地支
+  var CS_VALUE = { '长生': 1, '临官': 1, '帝旺': 1, '冠带': 0.6, '沐浴': 0.3,
+    '养': -0.3, '胎': -0.3, '衰': -0.6, '病': -0.8, '绝': -0.8, '死': -1, '墓': -1 };
+
+  /** 日主在该地支的十二长生状态 */
+  function changshengState(dayGan, zhiIdx) {
+    var start = CS_START[dayGan];
+    var yang = GYY[dayGan] === 0;
+    for (var i = 0; i < 12; i++) {
+      var z = yang ? (start + i) % 12 : (start - i + 24) % 12;
+      if (z === zhiIdx) return { name: CHANGSHENG[i], value: CS_VALUE[CHANGSHENG[i]] };
+    }
+    return { name: '—', value: 0 };
+  }
+
+  /** 该干支所在旬的空亡地支（旬首 +10、+11） */
+  function xunKong(gzIdx) {
+    var xunStart = Math.floor(gzIdx / 10) * 10;
+    var z = xunStart % 12;
+    return [(z + 10) % 12, (z + 11) % 12];
+  }
+
   function branchValue(from, to) {
     if (LIUCHONG[from] === to) return -1;
     if (LIUHAI[from] === to) return -0.6;
@@ -463,21 +486,36 @@
     var t = todayPillars(spec, lon, tz);
     var dayGan = chart.dayGan, dayWX = GAN_WX[dayGan], state = chart.strength.state;
     var mz = chart.pillars.month.zhi, dz = chart.pillars.day.zhi, yz = chart.pillars.year.zhi;
+    var hz = chart.pillars.hour.gan >= 0 ? chart.pillars.hour.zhi : -1;
     var sig = [];
     function push(label, value, weight, detail) { sig.push({ label: label, value: value, weight: weight, detail: detail || '' }); }
 
+    // 今日维度：日干十神 + 日支与命局四柱的关系 + 五行 + 十二长生 + 空亡
     var tGod = tenGod(dayGan, GAN[t.day.gan]);
-    push('今日日干 ' + GAN[t.day.gan] + '（' + tGod + '）', godValue(tGod, state), 12);
+    push('今日日干 ' + GAN[t.day.gan] + '（' + tGod + '）', godValue(tGod, state), 14);
     var rel = branchRel(t.day.zhi, dz);
-    push('今日日支 ' + ZHI[t.day.zhi] + ' 与命局日支', rel.length ? rel.reduce(function (s, r) { return s + branchValue(t.day.zhi, dz); }, 0) / rel.length : 0, 10, rel.join(''));
-    push('今日日支五行', wxValue(ZHI_WX[t.day.zhi], dayWX), 6);
+    push('今日日支 ' + ZHI[t.day.zhi] + ' 与命局日支', rel.length ? rel.reduce(function (s, r) { return s + branchValue(t.day.zhi, dz); }, 0) / rel.length : 0, 12, rel.join(''));
+    var relM2 = branchRel(t.day.zhi, mz);
+    push('今日日支 与命局月支', relM2.length ? relM2.reduce(function (s, r) { return s + branchValue(t.day.zhi, mz); }, 0) / relM2.length : 0, 6, relM2.join(''));
+    var relY2 = branchRel(t.day.zhi, yz);
+    push('今日日支 与命局年支', relY2.length ? relY2.reduce(function (s, r) { return s + branchValue(t.day.zhi, yz); }, 0) / relY2.length : 0, 5, relY2.join(''));
+    var relH2 = hz >= 0 ? branchRel(t.day.zhi, hz) : [];
+    push('今日日支 与命局时支', relH2.length ? relH2.reduce(function (s, r) { return s + branchValue(t.day.zhi, hz); }, 0) / relH2.length : 0, 5, relH2.join(''));
+    push('今日日支五行', wxValue(ZHI_WX[t.day.zhi], dayWX), 7);
+    var cs = changshengState(dayGan, t.day.zhi);
+    push('今日日支 ' + ZHI[t.day.zhi] + ' 对日主为' + cs.name, cs.value, 10);
+    var kong = xunKong(t.day.gz);
+    var isKong = kong.indexOf(t.day.zhi) >= 0;
+    push(isKong ? '今日日支落空亡' : '今日日支不落空亡', isKong ? -0.8 : 0.2, 8, isKong ? ZHI[kong[0]] + ZHI[kong[1]] : '');
+
+    // 流年 / 大运 / 月令
     var lGod = tenGod(dayGan, GAN[t.year.gan]);
-    push('流年 ' + t.year.name + ' 天干', godValue(lGod, state), 10);
+    push('流年 ' + t.year.name + ' 天干', godValue(lGod, state), 9);
     var relL = branchRel(t.year.zhi, dz);
-    push('流年地支 ' + ZHI[t.year.zhi] + ' 与命局日支', relL.length ? relL.reduce(function (s) { return s + branchValue(t.year.zhi, dz); }, 0) / relL.length : 0, 12, relL.join(''));
-    push('流年地支五行', wxValue(ZHI_WX[t.year.zhi], dayWX), 6);
+    push('流年地支 ' + ZHI[t.year.zhi] + ' 与命局日支', relL.length ? relL.reduce(function (s) { return s + branchValue(t.year.zhi, dz); }, 0) / relL.length : 0, 10, relL.join(''));
+    push('流年地支五行', wxValue(ZHI_WX[t.year.zhi], dayWX), 5);
     var relY = branchRel(t.year.zhi, yz);
-    push('太岁与命局年支', relY.length ? relY.reduce(function (s) { return s + branchValue(t.year.zhi, yz); }, 0) / relY.length : 0, 6, relY.join(''));
+    push('太岁与命局年支', relY.length ? relY.reduce(function (s) { return s + branchValue(t.year.zhi, yz); }, 0) / relY.length : 0, 4, relY.join(''));
 
     // 当前大运
     var age = (spec.y - chart.input.y) + (spec.m - chart.input.m) / 12;
@@ -485,12 +523,12 @@
     chart.yun.list.forEach(function (y) { if (age >= y.ageFrom && age < y.ageTo) cur = y; });
     if (cur) {
       var yGod = tenGod(dayGan, GAN[cur.gan]);
-      push('大运 ' + cur.name + ' 天干', godValue(yGod, state), 8);
+      push('大运 ' + cur.name + ' 天干', godValue(yGod, state), 7);
       var relD = branchRel(cur.zhi, dz);
-      push('大运地支 ' + ZHI[cur.zhi] + ' 与命局日支', relD.length ? relD.reduce(function (s) { return s + branchValue(cur.zhi, dz); }, 0) / relD.length : 0, 10, relD.join(''));
+      push('大运地支 ' + ZHI[cur.zhi] + ' 与命局日支', relD.length ? relD.reduce(function (s) { return s + branchValue(cur.zhi, dz); }, 0) / relD.length : 0, 7, relD.join(''));
     }
     var relM = branchRel(t.month.zhi, dz);
-    push('本月月支 ' + ZHI[t.month.zhi] + ' 与命局日支', relM.length ? relM.reduce(function (s) { return s + branchValue(t.month.zhi, dz); }, 0) / relM.length : 0, 6, relM.join(''));
+    push('本月月支 ' + ZHI[t.month.zhi] + ' 与命局日支', relM.length ? relM.reduce(function (s) { return s + branchValue(t.month.zhi, dz); }, 0) / relM.length : 0, 5, relM.join(''));
 
     var wsum = 0, vsum = 0;
     sig.forEach(function (s) { wsum += s.weight; vsum += s.value * s.weight; });
@@ -510,6 +548,12 @@
     var relYear = branchRel(t.year.zhi, dz);
     if (relYear.indexOf('冲') >= 0) ji.push('太岁冲日支（' + t.year.name + '）：变动之年，守成为上');
     ji.push('忌大额投资、冲动决策');
+    if (cs.name !== '—') {
+      yi.push('今日日支' + ZHI[t.day.zhi] + ' 对日主为' + cs.name + '：顺势而为');
+    }
+    if (isKong) {
+      ji.push('今日日支落空亡（' + ZHI[kong[0]] + ZHI[kong[1]] + '）：事倍功半，宜低调守成');
+    }
 
     // 评语
     var notes = [];

@@ -964,6 +964,39 @@ function godValue(god: string, state: string): number {
   return 0
 }
 
+const CHANGSHENG: string[] = ['长生', '沐浴', '冠带', '临官', '帝旺', '衰', '病', '死', '墓', '绝', '胎', '养']
+const CS_START: number[] = [11, 6, 2, 9, 2, 9, 5, 0, 8, 3]   // 甲乙丙丁戊己庚辛壬癸 的长生地支
+const CS_VALUE: Map<string, number> = new Map([
+  ['长生', 1], ['临官', 1], ['帝旺', 1], ['冠带', 0.6], ['沐浴', 0.3],
+  ['养', -0.3], ['胎', -0.3], ['衰', -0.6], ['病', -0.8], ['绝', -0.8], ['死', -1], ['墓', -1]
+])
+
+export interface CsState {
+  name: string
+  value: number
+}
+
+/** 日主在该地支的十二长生状态（阳干顺行、阴干逆行） */
+export function changshengState(dayGan: number, zhiIdx: number): CsState {
+  const start: number = CS_START[dayGan]
+  const yang: boolean = GYY[dayGan] === 0
+  for (let i = 0; i < 12; i++) {
+    const z: number = yang ? (start + i) % 12 : (start - i + 24) % 12
+    if (z === zhiIdx) {
+      const v: number | undefined = CS_VALUE.get(CHANGSHENG[i])
+      return { name: CHANGSHENG[i], value: v === undefined ? 0 : v }
+    }
+  }
+  return { name: '—', value: 0 }
+}
+
+/** 该干支所在旬的空亡地支（旬首 +10、+11） */
+export function xunKong(gzIdx: number): number[] {
+  const xunStart: number = Math.floor(gzIdx / 10) * 10
+  const z: number = xunStart % 12
+  return [(z + 10) % 12, (z + 11) % 12]
+}
+
 function branchValue(from: number, to: number): number {
   if (LIUCHONG[from] === to) {
     return -1
@@ -1017,6 +1050,7 @@ export function dailyFortune(chart: Chart, spec: NowSpec, lon: number, tz: numbe
   const mz: number = chart.month.zhi
   const dz: number = chart.day.zhi
   const yz: number = chart.year.zhi
+  const hz: number = chart.hour.gan >= 0 ? chart.hour.zhi : -1
   const sig: Signal[] = []
   const push: (label: string, value: number, weight: number, detail: string) => void =
     (label: string, value: number, weight: number, detail: string): void => {
@@ -1034,17 +1068,32 @@ export function dailyFortune(chart: Chart, spec: NowSpec, lon: number, tz: numbe
       return sum / rel.length
     }
 
+  // 今日维度：日干十神 + 日支与命局四柱的关系 + 五行 + 十二长生 + 空亡
   const tGod: string = tenGod(dayGan, t.day.gan)
-  push('今日日干 ' + t.day.ganChar + '（' + tGod + '）', godValue(tGod, state), 12, '')
-  push('今日日支 ' + t.day.zhiChar + ' 与命局日支', relValue(branchRel(t.day.zhi, dz), t.day.zhi, dz), 10,
+  push('今日日干 ' + t.day.ganChar + '（' + tGod + '）', godValue(tGod, state), 14, '')
+  push('今日日支 ' + t.day.zhiChar + ' 与命局日支', relValue(branchRel(t.day.zhi, dz), t.day.zhi, dz), 12,
     branchRel(t.day.zhi, dz).join(''))
-  push('今日日支五行', wxValue(ZHI_WX[t.day.zhi], dayWX), 6, '')
+  push('今日日支 与命局月支', relValue(branchRel(t.day.zhi, mz), t.day.zhi, mz), 6,
+    branchRel(t.day.zhi, mz).join(''))
+  push('今日日支 与命局年支', relValue(branchRel(t.day.zhi, yz), t.day.zhi, yz), 5,
+    branchRel(t.day.zhi, yz).join(''))
+  push('今日日支 与命局时支', hz >= 0 ? relValue(branchRel(t.day.zhi, hz), t.day.zhi, hz) : 0, 5,
+    hz >= 0 ? branchRel(t.day.zhi, hz).join('') : '')
+  push('今日日支五行', wxValue(ZHI_WX[t.day.zhi], dayWX), 7, '')
+  const cs: CsState = changshengState(dayGan, t.day.zhi)
+  push('今日日支 ' + t.day.zhiChar + ' 对日主为' + cs.name, cs.value, 10, '')
+  const kong: number[] = xunKong(t.day.gz)
+  const isKong: boolean = kong.indexOf(t.day.zhi) >= 0
+  push(isKong ? '今日日支落空亡' : '今日日支不落空亡', isKong ? -0.8 : 0.2, 8,
+    isKong ? ZHI[kong[0]] + ZHI[kong[1]] : '')
+
+  // 流年 / 大运 / 月令
   const lGod: string = tenGod(dayGan, t.year.gan)
-  push('流年 ' + t.year.name + ' 天干', godValue(lGod, state), 10, '')
-  push('流年地支 ' + t.year.zhiChar + ' 与命局日支', relValue(branchRel(t.year.zhi, dz), t.year.zhi, dz), 12,
+  push('流年 ' + t.year.name + ' 天干', godValue(lGod, state), 9, '')
+  push('流年地支 ' + t.year.zhiChar + ' 与命局日支', relValue(branchRel(t.year.zhi, dz), t.year.zhi, dz), 10,
     branchRel(t.year.zhi, dz).join(''))
-  push('流年地支五行', wxValue(ZHI_WX[t.year.zhi], dayWX), 6, '')
-  push('太岁与命局年支', relValue(branchRel(t.year.zhi, yz), t.year.zhi, yz), 6, branchRel(t.year.zhi, yz).join(''))
+  push('流年地支五行', wxValue(ZHI_WX[t.year.zhi], dayWX), 5, '')
+  push('太岁与命局年支', relValue(branchRel(t.year.zhi, yz), t.year.zhi, yz), 4, branchRel(t.year.zhi, yz).join(''))
 
   const age: number = (spec.y - chart.input.y) + (spec.m - chart.input.m) / 12
   let curName: string = ''
@@ -1064,11 +1113,11 @@ export function dailyFortune(chart: Chart, spec: NowSpec, lon: number, tz: numbe
   }
   if (curGan >= 0) {
     const yGod: string = tenGod(dayGan, curGan)
-    push('大运 ' + curName + ' 天干', godValue(yGod, state), 8, '')
-    push('大运地支 ' + ZHI[curZhi] + ' 与命局日支', relValue(branchRel(curZhi, dz), curZhi, dz), 10,
+    push('大运 ' + curName + ' 天干', godValue(yGod, state), 7, '')
+    push('大运地支 ' + ZHI[curZhi] + ' 与命局日支', relValue(branchRel(curZhi, dz), curZhi, dz), 7,
       branchRel(curZhi, dz).join(''))
   }
-  push('本月月支 ' + ZHI[t.month.zhi] + ' 与命局日支', relValue(branchRel(t.month.zhi, dz), t.month.zhi, dz), 6,
+  push('本月月支 ' + ZHI[t.month.zhi] + ' 与命局日支', relValue(branchRel(t.month.zhi, dz), t.month.zhi, dz), 5,
     branchRel(t.month.zhi, dz).join(''))
 
   let wsum: number = 0
@@ -1104,6 +1153,12 @@ export function dailyFortune(chart: Chart, spec: NowSpec, lon: number, tz: numbe
     ji.push('太岁冲日支（' + t.year.name + '）：变动之年，守成为上')
   }
   ji.push('忌大额投资、冲动决策')
+  if (cs.name !== '—') {
+    yi.push('今日日支' + ZHI[t.day.zhi] + ' 对日主为' + cs.name + '：顺势而为')
+  }
+  if (isKong) {
+    ji.push('今日日支落空亡（' + ZHI[kong[0]] + ZHI[kong[1]] + '）：事倍功半，宜低调守成')
+  }
 
   const notes: string[] = []
   const scored: number[] = []
