@@ -90,8 +90,10 @@ export struct ChartCard {
         this.row('同党/异党 BALANCE', this.chart.strength.same.toFixed(1) + ' / ' +
           this.chart.strength.other.toFixed(1))
         this.row('调候 CLIMATE', this.chart.strength.tiaohou.length > 0 ? '喜' + this.chart.strength.tiaohou : '—')
-        this.row('喜用神 FAVOR', this.chart.strength.favText)
-        this.row('忌神 AVOID', this.chart.strength.unfavText)
+        this.row('格局 GEJU', this.chart.strength.geJu)
+        this.row('旺衰 SCORE', this.chart.strength.score.toString() + ' · ' + this.chart.strength.stateText)
+        this.row('喜用 FAVOR', this.chart.strength.favWx.join('、') + '（' + this.chart.strength.favText + '）')
+        this.row('忌神 AVOID', this.chart.strength.unfavWx.join('、') + '（' + this.chart.strength.unfavText + '）')
       }
       .width('100%')
     }
