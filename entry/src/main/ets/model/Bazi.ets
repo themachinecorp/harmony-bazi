@@ -915,8 +915,11 @@ const SEASON_OF: Map<number, string> = new Map([
   [11, '冬'], [0, '冬'], [1, '四季'], [4, '四季'], [7, '四季'], [10, '四季']
 ])
 const RANK_VAL: Map<string, number> = new Map([
-  ['旺', 2], ['相', 1], ['休', 0], ['囚', -1], ['死', -2]
+  ['旺', 3], ['相', 1.5], ['休', 0], ['囚', -1.5], ['死', -3]
 ])
+/** 各柱权重：月令主导、时柱最次 */
+const DE_W: number[] = [0.8, 1.6, 1.2, 0.4]
+const SHI_W: number[] = [1.0, 1.2, 0.5]
 
 function deLingTable(season: string): Map<string, string> {
   const t: Map<string, string> = new Map()
@@ -1026,20 +1029,16 @@ export function wangShuaiOf(p: PillarSet): WangShuai {
     }
     const zwx: string = ZHI_WX[zi]
     let v: number = 0
+    const w: number = DE_W[i]
     if (zwx === dwx) {
-      v = 1.0
+      v = 1.0 * w
     } else if (sheng(zwx) === dwx) {
-      if (zi === 1 || zi === 4) {
-        v = 0.7
-      } else if (zi === 7 || zi === 10) {
-        v = 0.25
-      } else {
-        v = 0.6
-      }
+      const base: number = (zi === 1 || zi === 4) ? 0.7 : ((zi === 7 || zi === 10) ? 0.25 : 0.6)
+      v = base * w
     }
     if (v > 0) {
       deDi += v
-      deDiList.push(ZHI[zi] + '+' + v.toString())
+      deDiList.push(ZHI[zi] + '+' + v.toFixed(2))
     }
   }
 
@@ -1052,20 +1051,21 @@ export function wangShuaiOf(p: PillarSet): WangShuai {
       continue
     }
     const wx: string = GAN_WX[gi]
+    const w: number = SHI_W[i]
     let v: number = 0
     if (wx === dwx) {
-      v = 0.8
+      v = 0.8 * w
     } else if (sheng(wx) === dwx) {
-      v = 0.5
+      v = 0.5 * w
     } else if (ke(dwx) === wx) {
-      v = -0.4
+      v = -0.4 * w
     } else if (ke(wx) === dwx) {
-      v = -0.9
+      v = -0.9 * w
     } else if (sheng(dwx) === wx) {
-      v = -0.4
+      v = -0.4 * w
     }
     deShi += v
-    deShiList.push(GAN[gi] + (v > 0 ? '+' : '') + v.toString())
+    deShiList.push(GAN[gi] + (v > 0 ? '+' : '') + v.toFixed(2))
   }
 
   const cm: CombineMod[] = combineMods(p)
@@ -1089,7 +1089,7 @@ export function wangShuaiOf(p: PillarSet): WangShuai {
   }
 
   const score: number = lingVal + deDi + deShi + combineAdj
-  const state: string = score > 1.5 ? 'strong' : (score < -1.0 ? 'weak' : 'mid')
+  const state: string = score > 2.0 ? 'strong' : (score < -1.5 ? 'weak' : 'mid')
   const stText: string = state === 'strong' ? '身强' : (state === 'weak' ? '身弱' : '中和')
   return {
     score: Math.round(score * 100) / 100,
@@ -1119,10 +1119,8 @@ export function geJuOf(p: PillarSet): GeJu {
   if (ren !== undefined && ren === mzi) {
     return { name: '月劫(羊刃)格', basis: dg + '刃在' + ZHI[mzi] }
   }
-  const gans: string[] = [GAN[p.year.gan], GAN[p.month.gan], GAN[p.day.gan]]
-  if (p.hour.gan >= 0) {
-    gans.push(GAN[p.hour.gan])
-  }
+  // 透干候选：月干 → 年干 → 日干（不含时干，时柱不应改变格局）
+  const gans: string[] = [GAN[p.month.gan], GAN[p.year.gan], GAN[p.day.gan]]
   const hidden: string[] = HIDDEN[mzi]
   let foundGan: string = ''
   let foundGod: string = ''
@@ -1338,15 +1336,9 @@ export function judgeChart(p: PillarSet): JudgeResult {
       cnt2.set(q.wx, (cnt2.get(q.wx) === undefined ? 0 : cnt2.get(q.wx) as number) + 1)
       cnt2.set(q.zwx, (cnt2.get(q.zwx) === undefined ? 0 : cnt2.get(q.zwx) as number) + 0.8)
     }
-    favWx = baseFav.slice()
-    for (let i = 0; i < thWx.length; i++) {
-      const w: string = thWx[i]
-      const c: number = cnt2.get(w) === undefined ? 0 : cnt2.get(w) as number
-      if (c <= 0.9 && favWx.indexOf(w) < 0) {
-        favWx.unshift(w)
-      }
-    }
-    favWx = favWx.filter((w: string, i: number, a: string[]): boolean => a.indexOf(w) === i)
+    // 调候用神恒排最前（第一用神），扶抑用神随后；去重
+    const merged: string[] = thWx.concat(baseFav)
+    favWx = merged.filter((w: string, i: number, a: string[]): boolean => a.indexOf(w) === i)
     unfavWx = baseUnfav.filter((w: string, i: number, a: string[]): boolean =>
       a.indexOf(w) === i && favWx.indexOf(w) < 0)
     yongShenText = '正格，' + ws.stateText + '取用'

@@ -461,7 +461,10 @@
     '冬': { '旺': '水', '相': '木', '休': '金', '囚': '土', '死': '火' },
     '四季': { '旺': '土', '相': '金', '休': '火', '囚': '木', '死': '水' }
   };
-  var RANK_VAL = { '旺': 2, '相': 1, '休': 0, '囚': -1, '死': -2 };
+  var RANK_VAL = { '旺': 3, '相': 1.5, '休': 0, '囚': -1.5, '死': -3 };
+  // 各柱权重：月令主导、时柱最次
+  var DE_W = [0.8, 1.6, 1.2, 0.4];      // 年支/月支/日支/时支（得地）
+  var SHI_W = [1.0, 1.2, 0.5];          // 年干/月干/时干（得势）
 
   /** 调候用神表（穷通宝鉴通行表）：日干 × 月支序号 → 用神序列 */
   var TIAOHOU = {
@@ -528,27 +531,27 @@
     zhis.forEach(function (zi, idx) {
       if (zi < 0) return;
       var zwx = ZHI_WX[zi];
+      var w = DE_W[idx];
       var v = 0;
-      if (zwx === dwx) v = 1.0;                       // 同我：比劫得地
+      if (zwx === dwx) v = 1.0 * w;                    // 同我：比劫得地
       else if (SHENG[zwx] === dwx) {                   // 生我：印
-        if (zi === 1 || zi === 4) v = 0.7;             // 湿土（丑辰）能生金
-        else if (zi === 7 || zi === 10) v = 0.25;      // 燥土（未戌）生力弱
-        else v = 0.6;
+        var base = (zi === 1 || zi === 4) ? 0.7 : ((zi === 7 || zi === 10) ? 0.25 : 0.6);
+        v = base * w;                                   // 湿土（丑辰）能生金，燥土（未戌）生力弱
       }
-      if (v > 0) { deDi += v; deDiList.push(ZHI[zi] + '+' + v); }
+      if (v > 0) { deDi += v; deDiList.push(ZHI[zi] + '+' + v.toFixed(2)); }
     });
 
     var deShi = 0, deShiList = [];
-    [pillars.year.gan, pillars.month.gan, pillars.hour ? pillars.hour.gan : -1].forEach(function (gi) {
+    [pillars.year.gan, pillars.month.gan, pillars.hour ? pillars.hour.gan : -1].forEach(function (gi, idx) {
       if (gi < 0) return;
-      var wx = GAN_WX[gi], v = 0;
-      if (wx === dwx) v = 0.8;                         // 比劫
-      else if (SHENG[wx] === dwx) v = 0.5;             // 印
-      else if (KE[dwx] === wx) v = -0.4;               // 财
-      else if (KE[wx] === dwx) v = -0.9;               // 官杀
-      else if (SHENG[dwx] === wx) v = -0.4;            // 食伤
+      var wx = GAN_WX[gi], w = SHI_W[idx], v = 0;
+      if (wx === dwx) v = 0.8 * w;                      // 比劫
+      else if (SHENG[wx] === dwx) v = 0.5 * w;          // 印
+      else if (KE[dwx] === wx) v = -0.4 * w;            // 财
+      else if (KE[wx] === dwx) v = -0.9 * w;            // 官杀
+      else if (SHENG[dwx] === wx) v = -0.4 * w;         // 食伤
       deShi += v;
-      deShiList.push(GAN[gi] + (v > 0 ? '+' : '') + v);
+      deShiList.push(GAN[gi] + (v > 0 ? '+' : '') + v.toFixed(2));
     });
 
     var cb = combineMods(pillars);
@@ -565,7 +568,7 @@
     });
 
     var score = lingVal + deDi + deShi + combineAdj;
-    var state = score > 1.5 ? 'strong' : (score < -1.0 ? 'weak' : 'mid');
+    var state = score > 2.0 ? 'strong' : (score < -1.5 ? 'weak' : 'mid');
     return {
       score: +score.toFixed(2),
       state: state,
@@ -586,8 +589,8 @@
     if (LUS[dg] === mzi) return { name: '建禄格', type: 'normal', basis: dg + '禄在' + ZHI[mzi] };
     if (RENS[dg] === mzi) return { name: '月劫(羊刃)格', type: 'normal', basis: dg + '刃在' + ZHI[mzi] };
 
-    var gans = [pillars.year.gan, pillars.month.gan, pillars.day.gan].map(function (i) { return GAN[i]; });
-    if (pillars.hour) gans.push(GAN[pillars.hour.gan]);
+    // 透干候选：月干 → 年干 → 日干（**不含时干**，时柱最次，不应改变格局）
+    var gans = [pillars.month.gan, pillars.year.gan, pillars.day.gan].map(function (i) { return GAN[i]; });
     var found = null;
     for (var i = 0; i < hidden.length; i++) {
       var g = hidden[i];
@@ -699,7 +702,8 @@
           baseUnfav = [dwx, { '木': '水', '火': '木', '土': '火', '金': '土', '水': '金' }[dwx]];
         }
       }
-      // 调候叠加：调候用神若为五行且缺，提到最前
+      // 调候优先于扶抑（穷通宝鉴：调候为急）。调候用神一律并入喜用；
+      // 原局真正缺（count<0.5）时排在最前，否则排在其后。忌用要剔除与喜用冲突者。
       var thWx = [];
       th.forEach(function (g) {
         var w = GAN_WX[GAN.indexOf(g)];
@@ -710,11 +714,8 @@
         if (!p) return;
         cnt2[p.wx] = (cnt2[p.wx] || 0) + 1; cnt2[p.zwx] = (cnt2[p.zwx] || 0) + 0.8;
       });
-      favWx = baseFav.slice();
-      thWx.forEach(function (w) {
-        if ((cnt2[w] || 0) <= 0.9 && favWx.indexOf(w) < 0) favWx.unshift(w);
-      });
-      favWx = favWx.filter(function (w, i, a) { return a.indexOf(w) === i; });
+      // 调候用神恒排最前（第一用神），扶抑用神随后；去重
+      favWx = thWx.concat(baseFav).filter(function (w, i, a) { return a.indexOf(w) === i; });
       unfavWx = baseUnfav.filter(function (w, i, a) { return a.indexOf(w) === i && favWx.indexOf(w) < 0; });
       yongShenText = '正格，' + ws.stateText + '取用';
       reasons.push('格局：' + gj.name + '（' + gj.basis + '）');

@@ -98,5 +98,29 @@ eq('寅巳(害+三刑)', B.branchRel(2, 5).join(''), '害三刑');
   });
 }
 
+/* 判盘稳定性：同一天不同时刻，喜忌/格局/强弱不应翻转 */
+{
+  const times = [[3, 0], [5, 30], [8, 0], [11, 30], [15, 29], [18, 0], [20, 0], [22, 0]];
+  const keys = new Set();
+  let first = null;
+  times.forEach(t => {
+    const c = B.buildChart({ y: 1994, m: 6, d: 14, h: t[0], mi: t[1], lon: 106.55, gender: 'm', tz: 8 });
+    const j = c.strength.judge;
+    const k = [j.wangShuai.stateText, j.geJu.name, j.favWx.join(''), j.unfavWx.join('')].join('|');
+    keys.add(k);
+    if (first === null) first = k;
+  });
+  eq('同日喜忌稳定(8个时辰)', keys.size, 1);
+  eq('本日喜忌内容', Array.from(keys)[0], '身弱|七杀格|水土金|木火');
+}
+
+/* 调候优先：辛金午月须取水（壬己癸），且水必在喜用 */
+{
+  const c = B.buildChart({ y: 1994, m: 6, d: 14, h: 15, mi: 29, lon: 106.55, gender: 'm', tz: 8 });
+  const j = c.strength.judge;
+  eq('辛午月调候', j.tiaohou.join(''), '壬己癸');
+  eq('调候水入喜用', j.favWx.indexOf('水') >= 0, true);
+}
+
 console.log(`\n${fail === 0 ? '全部通过' : '有失败项'}：${pass} 通过 / ${fail} 失败`);
 process.exit(fail ? 1 : 0);
