@@ -537,8 +537,16 @@
       else if (SHENG[zwx] === dwx) {                   // 生我：印
         var base = (zi === 1 || zi === 4) ? 0.7 : ((zi === 7 || zi === 10) ? 0.25 : 0.6);
         v = base * w;                                   // 湿土（丑辰）能生金，燥土（未戌）生力弱
+      } else {
+        // 耗身：地支里的食伤/财/官同样要计力（冬月两子夹身、水财泛滥必须体现）
+        var drain = 1.0;
+        if (SHENG[dwx] === zwx) drain = 0.5;            // 食伤（泄）
+        else if (KE[dwx] === zwx) drain = 1.0;          // 财（耗）
+        else if (KE[zwx] === dwx) drain = 1.1;          // 官杀（克）
+        v = -drain * w;
       }
-      if (v > 0) { deDi += v; deDiList.push(ZHI[zi] + '+' + v.toFixed(2)); }
+      deDi += v;
+      deDiList.push(ZHI[zi] + (v > 0 ? '+' : '') + v.toFixed(2));
     });
 
     var deShi = 0, deShiList = [];
@@ -714,9 +722,35 @@
         if (!p) return;
         cnt2[p.wx] = (cnt2[p.wx] || 0) + 1; cnt2[p.zwx] = (cnt2[p.zwx] || 0) + 0.8;
       });
-      // 调候用神恒排最前（第一用神），扶抑用神随后；去重
-      favWx = thWx.concat(baseFav).filter(function (w, i, a) { return a.indexOf(w) === i; });
+      // 调候与扶抑：同向者并入喜用并排前；冲突者降为「佐用」（如身弱逢官杀之木，只作疏土少量用）
+      var assist = [];
+      var thSame = [];
+      // 「缺」只看年月日主体（不含时干），避免调候优先级随时辰变化
+      var cntMain = {};
+      [pillars.year, pillars.month, pillars.day].forEach(function (p) {
+        if (!p) return;
+        cntMain[p.wx] = (cntMain[p.wx] || 0) + 1; cntMain[p.zwx] = (cntMain[p.zwx] || 0) + 0.8;
+      });
+      thWx.forEach(function (w) {
+        if (thSame.indexOf(w) >= 0 || assist.indexOf(w) >= 0) return;
+        var grp = wxToGodGroup(w, dwx);
+        if (baseFav.indexOf(w) >= 0) {
+          thSame.push(w);                       // 与扶抑同向：入喜
+        } else if (grp === '印' || grp === '比') {
+          thSame.push(w);                       // 扶身之药：恒入喜
+        } else if (grp === '食') {
+          // 泄：原局（年月日）真缺 → 调候救急，入喜；否则只作佐用
+          if ((cntMain[w] || 0) < 0.5) thSame.push(w); else assist.push(w);
+        } else {
+          // 财/官杀：身弱时不作为喜用（克身耗身），仅作佐用；身强则耗克为用
+          if (ws.state === 'weak') assist.push(w); else thSame.push(w);
+        }
+      });
+      favWx = thSame.concat(baseFav).filter(function (w, i, a) { return a.indexOf(w) === i; });
       unfavWx = baseUnfav.filter(function (w, i, a) { return a.indexOf(w) === i && favWx.indexOf(w) < 0; });
+      if (assist.length) {
+        reasons.push('调候佐用（与扶抑方向冲突，只作少量）：' + assist.join('、'));
+      }
       yongShenText = '正格，' + ws.stateText + '取用';
       reasons.push('格局：' + gj.name + '（' + gj.basis + '）');
       if (th.length) {

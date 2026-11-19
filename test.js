@@ -122,5 +122,26 @@ eq('寅巳(害+三刑)', B.branchRel(2, 5).join(''), '害三刑');
   eq('调候水入喜用', j.favWx.indexOf('水') >= 0, true);
 }
 
+/* 冬生戊土（1994-12-28 女 重庆）：两子当头身弱，喜火土忌水木金，木为佐用 */
+{
+  const times = [[8, 0], [12, 0], [20, 0]];
+  const keys = new Set();
+  times.forEach(t => {
+    const c = B.buildChart({ y: 1994, m: 12, d: 28, h: t[0], mi: t[1], lon: 106.55, gender: 'f', tz: 8 });
+    const j = c.strength.judge;
+    keys.add([j.wangShuai.stateText, j.geJu.name, j.favWx.join(''), j.unfavWx.join('')].join('|'));
+  });
+  eq('冬戊土结论稳定', keys.size, 1);
+  eq('冬戊土喜忌', Array.from(keys)[0], '身弱|正财格|火土|水木金');
+}
+
+/* 冬生戊土不能判成「身强喜财」：地支两子（财）必须计力 */
+{
+  const c = B.buildChart({ y: 1994, m: 12, d: 28, h: 12, mi: 0, lon: 106.55, gender: 'f', tz: 8 });
+  eq('冬戊土判身弱', c.strength.stateText, '身弱');
+  eq('冬戊土喜火', c.strength.judge.favWx.indexOf('火') >= 0, true);
+  eq('冬戊土忌水', c.strength.judge.unfavWx.indexOf('水') >= 0, true);
+}
+
 console.log(`\n${fail === 0 ? '全部通过' : '有失败项'}：${pass} 通过 / ${fail} 失败`);
 process.exit(fail ? 1 : 0);

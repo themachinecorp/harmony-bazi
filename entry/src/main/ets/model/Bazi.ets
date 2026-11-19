@@ -1035,11 +1035,20 @@ export function wangShuaiOf(p: PillarSet): WangShuai {
     } else if (sheng(zwx) === dwx) {
       const base: number = (zi === 1 || zi === 4) ? 0.7 : ((zi === 7 || zi === 10) ? 0.25 : 0.6)
       v = base * w
+    } else {
+      // 耗身：地支里的食伤/财/官同样计力
+      let drain: number = 1.0
+      if (sheng(dwx) === zwx) {
+        drain = 0.5
+      } else if (ke(dwx) === zwx) {
+        drain = 1.0
+      } else if (ke(zwx) === dwx) {
+        drain = 1.1
+      }
+      v = -drain * w
     }
-    if (v > 0) {
-      deDi += v
-      deDiList.push(ZHI[zi] + '+' + v.toFixed(2))
-    }
+    deDi += v
+    deDiList.push(ZHI[zi] + (v > 0 ? '+' : '') + v.toFixed(2))
   }
 
   const deShiList: string[] = []
@@ -1336,8 +1345,45 @@ export function judgeChart(p: PillarSet): JudgeResult {
       cnt2.set(q.wx, (cnt2.get(q.wx) === undefined ? 0 : cnt2.get(q.wx) as number) + 1)
       cnt2.set(q.zwx, (cnt2.get(q.zwx) === undefined ? 0 : cnt2.get(q.zwx) as number) + 0.8)
     }
-    // 调候用神恒排最前（第一用神），扶抑用神随后；去重
-    const merged: string[] = thWx.concat(baseFav)
+    // 调候分类：印比恒入喜；食伤看原局(年月日)缺不缺；财官杀身弱则只作佐用
+    const assist: string[] = []
+    const thSame: string[] = []
+    const cntMain: Map<string, number> = new Map()
+    const psMain: Pillar[] = [p.year, p.month, p.day]
+    for (let i = 0; i < psMain.length; i++) {
+      const q: Pillar = psMain[i]
+      cntMain.set(q.wx, (cntMain.get(q.wx) === undefined ? 0 : cntMain.get(q.wx) as number) + 1)
+      cntMain.set(q.zwx, (cntMain.get(q.zwx) === undefined ? 0 : cntMain.get(q.zwx) as number) + 0.8)
+    }
+    for (let i = 0; i < thWx.length; i++) {
+      const w: string = thWx[i]
+      if (thSame.indexOf(w) >= 0 || assist.indexOf(w) >= 0) {
+        continue
+      }
+      const grp: string = wxToGodGroup(w, dwx)
+      if (baseFav.indexOf(w) >= 0) {
+        thSame.push(w)
+      } else if (grp === '印' || grp === '比') {
+        thSame.push(w)
+      } else if (grp === '食') {
+        const cm: number = cntMain.get(w) === undefined ? 0 : cntMain.get(w) as number
+        if (cm < 0.5) {
+          thSame.push(w)
+        } else {
+          assist.push(w)
+        }
+      } else {
+        if (ws.state === 'weak') {
+          assist.push(w)
+        } else {
+          thSame.push(w)
+        }
+      }
+    }
+    if (assist.length > 0) {
+      reasons.push('调候佐用（与扶抑方向冲突，只作少量）：' + assist.join('、'))
+    }
+    const merged: string[] = thSame.concat(baseFav)
     favWx = merged.filter((w: string, i: number, a: string[]): boolean => a.indexOf(w) === i)
     unfavWx = baseUnfav.filter((w: string, i: number, a: string[]): boolean =>
       a.indexOf(w) === i && favWx.indexOf(w) < 0)
