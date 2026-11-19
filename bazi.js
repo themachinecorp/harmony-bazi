@@ -447,56 +447,369 @@
     t.setUTCDate(t.getUTCDate() + dd);
     return t.getUTCFullYear() + '-' + pad(t.getUTCMonth() + 1) + '-' + pad(t.getUTCDate());
   }
-  function computeStrength(pillars) {
-    var dayGan = pillars.day.gan, dwx = GAN_WX[dayGan];
-    var same = 0, other = 0; // 同党(比劫+印) / 异党(食伤+财官)
-    function addGan(g, w) {
-      var god = tenGod(dayGan, g), grp = godGroup(god), wx = GAN_WX[ganIdx(g)];
-      var v = w;
-      if (grp === '印' || grp === '比') same += v; else other += v;
+  /* ================= 子平判盘：旺衰 / 格局 / 调候 / 病药 ================= */
+  var LUS = { '甲': 2, '乙': 3, '丙': 5, '丁': 6, '戊': 5, '己': 6, '庚': 8, '辛': 9, '壬': 11, '癸': 0 };
+  var RENS = { '甲': 3, '乙': 2, '丙': 6, '丁': 5, '戊': 6, '己': 5, '庚': 9, '辛': 8, '壬': 0, '癸': 11 };
+  var SANHE = [[8, 0, 4, '水'], [11, 3, 7, '木'], [2, 6, 10, '火'], [5, 9, 1, '金']];
+  var SANHUI = [[2, 3, 4, '木'], [5, 6, 7, '火'], [8, 9, 10, '金'], [11, 0, 1, '水']];
+  var LIUHE_WX = [[0, 1, '土'], [2, 11, '木'], [3, 10, '火'], [4, 9, '金'], [5, 8, '水'], [6, 7, '火']];
+  var SEASON_OF = { 2: '春', 3: '春', 5: '夏', 6: '夏', 8: '秋', 9: '秋', 11: '冬', 0: '冬', 1: '四季', 4: '四季', 7: '四季', 10: '四季' };
+  var DE_LING = {
+    '春': { '旺': '木', '相': '火', '休': '水', '囚': '金', '死': '土' },
+    '夏': { '旺': '火', '相': '土', '休': '木', '囚': '水', '死': '金' },
+    '秋': { '旺': '金', '相': '水', '休': '土', '囚': '火', '死': '木' },
+    '冬': { '旺': '水', '相': '木', '休': '金', '囚': '土', '死': '火' },
+    '四季': { '旺': '土', '相': '金', '休': '火', '囚': '木', '死': '水' }
+  };
+  var RANK_VAL = { '旺': 2, '相': 1, '休': 0, '囚': -1, '死': -2 };
+
+  /** 调候用神表（穷通宝鉴通行表）：日干 × 月支序号 → 用神序列 */
+  var TIAOHOU = {
+    '甲': [['癸', '丙'], ['丙', '癸'], ['庚', '丙', '丁'], ['癸', '丁', '庚'], ['癸', '丁', '庚'], ['癸', '丁', '庚'], ['庚', '丁', '壬'], ['庚', '丙', '丁'], ['庚', '甲', '丁', '壬'], ['庚', '丁', '丙', '戊'], ['丁', '庚', '丙'], ['丁', '庚', '丙']],
+    '乙': [['丙', '癸'], ['丙', '癸'], ['癸', '丙', '戊'], ['癸'], ['癸', '丙'], ['癸', '丙'], ['丙', '癸', '己'], ['癸', '丙', '丁'], ['癸', '辛'], ['丙', '戊'], ['丙'], ['丙']],
+    '丙': [['壬', '庚'], ['壬', '己'], ['壬', '甲'], ['壬', '癸', '庚'], ['壬', '庚'], ['壬', '庚'], ['壬', '戊'], ['壬', '癸'], ['甲', '壬'], ['甲', '戊', '庚', '壬'], ['壬', '戊', '己'], ['壬', '甲']],
+    '丁': [['甲', '庚'], ['庚', '甲'], ['甲', '庚'], ['甲', '庚'], ['壬', '庚', '癸'], ['甲', '壬', '庚'], ['甲', '庚', '丙', '戊'], ['甲', '庚', '丙', '戊'], ['甲', '庚', '戊'], ['甲', '庚'], ['甲', '庚'], ['甲', '庚']],
+    '戊': [['丙', '甲', '癸'], ['丙', '甲', '癸'], ['甲', '丙', '癸'], ['甲', '丙', '癸'], ['壬', '甲', '丙'], ['癸', '丙', '甲'], ['丙', '癸', '甲'], ['丙', '癸'], ['甲', '丙', '癸'], ['甲', '丙'], ['丙', '甲'], ['丙', '甲']],
+    '己': [['丙', '庚', '甲'], ['甲', '癸', '丙'], ['丙', '癸', '甲'], ['癸', '丙'], ['癸', '丙'], ['癸', '丙'], ['丙', '癸'], ['丙', '癸'], ['甲', '丙', '癸'], ['丙', '甲', '戊'], ['丙', '甲', '戊'], ['丙', '甲', '戊']],
+    '庚': [['戊', '甲', '壬', '丙', '丁'], ['丁', '甲', '庚', '丙'], ['甲', '丁', '壬', '癸'], ['壬', '戊', '丙', '丁'], ['壬', '癸'], ['丁', '甲'], ['丁', '甲'], ['丁', '甲', '丙'], ['甲', '壬'], ['丁', '丙'], ['丁', '甲', '丙'], ['丙', '丁', '甲']],
+    '辛': [['己', '壬', '庚'], ['壬', '甲'], ['壬', '甲'], ['壬', '甲', '癸'], ['壬', '己', '癸'], ['壬', '庚', '甲'], ['壬', '甲', '戊'], ['壬', '甲'], ['壬', '甲'], ['壬', '丙'], ['丙', '戊', '壬', '甲'], ['丙', '壬', '戊', '己']],
+    '壬': [['庚', '丙', '戊'], ['戊', '辛', '庚'], ['甲', '庚'], ['壬', '辛', '庚', '癸'], ['癸', '庚', '辛'], ['辛', '甲'], ['戊', '丁'], ['甲', '庚'], ['甲', '丙'], ['戊', '丙', '庚'], ['戊', '丙'], ['丙', '丁', '甲']],
+    '癸': [['辛', '丙'], ['庚', '辛'], ['丙', '辛', '甲'], ['辛'], ['庚', '辛', '壬', '癸'], ['庚', '辛', '壬', '癸'], ['丁'], ['辛', '丙'], ['辛', '甲', '壬', '癸'], ['庚', '辛', '戊', '丁'], ['丙', '辛'], ['丙', '丁']]
+  };
+
+  /** 合化/三会/三合/六合 修正 */
+  function combineMods(pillars) {
+    var z = [pillars.year.zhi, pillars.month.zhi, pillars.day.zhi, pillars.hour.zhi];
+    var mods = {};
+    var notes = [];
+    function add(wx, v, note) {
+      mods[wx] = (mods[wx] || 0) + v;
+      notes.push(note);
     }
-    addGan(GAN[pillars.year.gan], 1);
-    addGan(GAN[pillars.month.gan], 1);
-    addGan(GAN[pillars.day.gan], 1);
-    if (pillars.hour) addGan(GAN[pillars.hour.gan], 1);
-    function addZhi(z, w) {
-      HIDDEN[z].forEach(function (g, i) {
-        var god = tenGod(dayGan, g), grp = godGroup(god);
-        var v = w * HIDDEN_W[z][i];
-        if (grp === '印' || grp === '比') same += v; else other += v;
-      });
-    }
-    addZhi(pillars.year.zhi, 0.8);
-    addZhi(pillars.month.zhi, 1.6);   // 月令当权
-    addZhi(pillars.day.zhi, 1.2);
-    if (pillars.hour) addZhi(pillars.hour.zhi, 0.8);
-    var ratio = same / (same + other);
-    var state = ratio > 0.56 ? 'strong' : (ratio < 0.44 ? 'weak' : 'mid');
-    // 调候
-    var mz = pillars.month.zhi;                 // 地支序号
-    var tiaohou = null;
-    if (mz === 11 || mz === 0 || mz === 1) tiaohou = '火';   // 亥子丑：寒冬喜火
-    else if (mz === 5 || mz === 6 || mz === 7) tiaohou = '水'; // 巳午未：炎夏喜水
-    var fav, unfav;
-    if (state === 'weak') { fav = ['印', '比']; unfav = ['食', '财', '官']; }
-    else if (state === 'strong') { fav = ['食', '财', '官']; unfav = ['印', '比']; }
-    else { fav = ['财', '官', '食']; unfav = ['比']; }
-    if (tiaohou) {
-      fav = fav.slice();
-      var idx = fav.indexOf(tiaohou === '火' ? '食' : '财');
-      if (idx < 0) fav.push(tiaohou === '火' ? '食' : '财');
-    }
+    // 三会（力量最大）
+    SANHUI.forEach(function (g) {
+      var have = [g[0], g[1], g[2]].filter(function (x) { return z.indexOf(x) >= 0; });
+      if (have.length === 3) {
+        add(g[3], 3, ZHI[g[0]] + ZHI[g[1]] + ZHI[g[2]] + '三会' + g[3] + '局');
+      }
+    });
+    // 三合
+    SANHE.forEach(function (g) {
+      var have = [g[0], g[1], g[2]].filter(function (x) { return z.indexOf(x) >= 0; });
+      if (have.length === 3) {
+        add(g[3], 2.2, ZHI[g[0]] + ZHI[g[1]] + ZHI[g[2]] + '三合' + g[3] + '局');
+      }
+    });
+    // 六合（相邻两支都现即论）
+    LIUHE_WX.forEach(function (g) {
+      if (z.indexOf(g[0]) >= 0 && z.indexOf(g[1]) >= 0) {
+        add(g[2], 0.6, ZHI[g[0]] + ZHI[g[1]] + '六合化' + g[2]);
+      }
+    });
+    return { mods: mods, notes: notes };
+  }
+
+  /**
+   * 旺衰：得令 + 得地 + 得势，含合化修正
+   */
+  function wangShuai(pillars) {
+    var dg = GAN[pillars.day.gan];
+    var dwx = GAN_WX[pillars.day.gan];
+    var mzi = pillars.month.zhi;
+    var season = SEASON_OF[mzi];
+    var tbl = DE_LING[season];
+    var lingRank = '', lingVal = 0;
+    ['旺', '相', '休', '囚', '死'].forEach(function (k) {
+      if (tbl[k] === dwx) { lingRank = k; lingVal = RANK_VAL[k]; }
+    });
+
+    var deDi = 0, deDiList = [];
+    var zhis = [pillars.year.zhi, pillars.month.zhi, pillars.day.zhi, pillars.hour.zhi];
+    zhis.forEach(function (zi, idx) {
+      var zwx = ZHI_WX[zi];
+      var v = 0;
+      if (zwx === dwx) v = 1.0;                       // 同我：比劫得地
+      else if (SHENG[zwx] === dwx) {                   // 生我：印
+        if (zi === 1 || zi === 4) v = 0.7;             // 湿土（丑辰）能生金
+        else if (zi === 7 || zi === 10) v = 0.25;      // 燥土（未戌）生力弱
+        else v = 0.6;
+      }
+      if (v > 0) { deDi += v; deDiList.push(ZHI[zi] + '+' + v); }
+    });
+
+    var deShi = 0, deShiList = [];
+    [pillars.year.gan, pillars.month.gan, pillars.hour.gan].forEach(function (gi) {
+      var wx = GAN_WX[gi], v = 0;
+      if (wx === dwx) v = 0.8;                         // 比劫
+      else if (SHENG[wx] === dwx) v = 0.5;             // 印
+      else if (KE[dwx] === wx) v = -0.4;               // 财
+      else if (KE[wx] === dwx) v = -0.9;               // 官杀
+      else if (SHENG[dwx] === wx) v = -0.4;            // 食伤
+      deShi += v;
+      deShiList.push(GAN[gi] + (v > 0 ? '+' : '') + v);
+    });
+
+    var cb = combineMods(pillars);
+    var combineAdj = 0;
+    var myWx = dwx, helpWx = { '木': '水', '火': '木', '土': '火', '金': '土', '水': '金' }[dwx];
+    ['木', '火', '土', '金', '水'].forEach(function (w) {
+      var m = cb.mods[w] || 0;
+      if (m === 0) return;
+      if (w === myWx) combineAdj += m * 0.5;
+      else if (w === helpWx) combineAdj += m * 0.3;
+      else if (w === SHENG[dwx]) combineAdj -= m * 0.35;   // 食伤
+      else if (w === KE[dwx]) combineAdj -= m * 0.3;       // 财
+      else combineAdj -= m * 0.45;                          // 官杀
+    });
+
+    var score = lingVal + deDi + deShi + combineAdj;
+    var state = score > 1.5 ? 'strong' : (score < -1.0 ? 'weak' : 'mid');
     return {
-      same: +same.toFixed(2), other: +other.toFixed(2), ratio: +ratio.toFixed(3), state: state,
+      score: +score.toFixed(2),
+      state: state,
       stateText: state === 'strong' ? '身强' : (state === 'weak' ? '身弱' : '中和'),
-      fav: fav, unfav: unfav, favText: fav.map(function (g) { return ({ '印': '印绶', '比': '比劫', '食': '食伤', '财': '财星', '官': '官杀' })[g]; }).join('、'),
-      unfavText: unfav.map(function (g) { return ({ '印': '印绶', '比': '比劫', '食': '食伤', '财': '财星', '官': '官杀' })[g]; }).join('、'),
-      tiaohou: tiaohou, dayWx: dwx
+      lingRank: lingRank, lingVal: lingVal, season: season,
+      deDi: +deDi.toFixed(2), deDiList: deDiList,
+      deShi: +deShi.toFixed(2), deShiList: deShiList,
+      combineAdj: +combineAdj.toFixed(2), combineNotes: cb.notes
     };
   }
 
-  /* ---------- 今日 ---------- */
-  /** 今日四柱。spec = {y,m,d,h,mi}（按北京时间给出的钟表读数），时柱用出生地经度的真太阳时 */
+  /** 格局：月令本气/中气透干 → 十神格；禄刃 → 建禄/月劫；极强弱 → 从格 */
+  function geJu(pillars, ws) {
+    var dg = GAN[pillars.day.gan];
+    var mzi = pillars.month.zhi;
+    var hidden = HIDDEN[mzi];
+    // 禄 / 刃
+    if (LUS[dg] === mzi) return { name: '建禄格', type: 'normal', basis: dg + '禄在' + ZHI[mzi] };
+    if (RENS[dg] === mzi) return { name: '月劫(羊刃)格', type: 'normal', basis: dg + '刃在' + ZHI[mzi] };
+
+    var gans = [pillars.year.gan, pillars.month.gan, pillars.day.gan, pillars.hour.gan].map(function (i) { return GAN[i]; });
+    var found = null;
+    for (var i = 0; i < hidden.length; i++) {
+      var g = hidden[i];
+      var gi = GAN.indexOf(g);
+      var god = tenGod(pillars.day.gan, gi);
+      var tou = gans.indexOf(g) >= 0 && gi !== pillars.day.gan;
+      if (tou && !found) {
+        found = { god: god, gan: g, pos: i === 0 ? '本气' : (i === 1 ? '中气' : '余气') };
+      }
+    }
+    if (!found) {
+      var g0 = hidden[0];
+      found = { god: tenGod(pillars.day.gan, GAN.indexOf(g0)), gan: g0, pos: '本气(未透)' };
+    }
+    var nameMap = {
+      '正官': '正官格', '七杀': '七杀格', '正财': '正财格', '偏财': '偏财格',
+      '正印': '正印格', '偏印': '偏印格', '食神': '食神格', '伤官': '伤官格',
+      '比肩': '比肩格', '劫财': '月劫格'
+    };
+    return { name: nameMap[found.god] || '杂格', type: 'normal', basis: '月令' + ZHI[mzi] + '藏' + found.gan + '(' + found.god + ',' + found.pos + ')透干' };
+  }
+
+  /** 从格检测：极弱无根或极强无制 */
+  function followCheck(pillars, ws) {
+    var dg = pillars.day.gan;
+    var dwx = GAN_WX[dg];
+    var zhis = [pillars.year.zhi, pillars.month.zhi, pillars.day.zhi, pillars.hour.zhi];
+    var hasRoot = zhis.some(function (zi) { return ZHI_WX[zi] === dwx; });
+    var hasYin = zhis.some(function (zi) { return SHENG[ZHI_WX[zi]] === dwx; });
+    if (ws.score <= -3.2 && !hasRoot && !hasYin) {
+      return { is: true, kind: '从弱', note: '日主无根无印、四柱一边倒，作从格论（不作身弱用印比）' };
+    }
+    if (ws.score >= 4.5 && !hasYin) {
+      return { is: true, kind: '从强', note: '日主极旺无制，作从强（专旺）论' };
+    }
+    return { is: false, kind: '', note: '' };
+  }
+
+  /** 调候用神（穷通宝鉴） */
+  function tiaoHou(dg, mzi) {
+    var row = TIAOHOU[dg];
+    if (!row || mzi < 0) return [];
+    // 表按「寅月」起排，查表换算：(月支序号 - 2 + 12) % 12
+    return row[(mzi - 2 + 12) % 12] || [];
+  }
+
+  /**
+   * 综合判盘：返回 强弱/格局/调候/喜忌五行/病药/推导
+   */
+  function judgeChart(pillars) {
+    var dg = GAN[pillars.day.gan];
+    var dwx = GAN_WX[pillars.day.gan];
+    var ws = wangShuai(pillars);
+    var gj = geJu(pillars, ws);
+    var fc = followCheck(pillars, ws);
+    var th = tiaoHou(dg, pillars.month.zhi);
+
+    var reasons = [];
+    reasons.push('得令：月令' + ZHI[pillars.month.zhi] + '属' + ws.season + '，' +
+      dg + dwx + '为「' + ws.lingRank + '」计 ' + (ws.lingVal > 0 ? '+' : '') + ws.lingVal);
+    reasons.push('得地：' + (ws.deDiList.length ? ws.deDiList.join('、') : '无') + ' 合计 ' +
+      (ws.deDi > 0 ? '+' : '') + ws.deDi);
+    reasons.push('得势：' + ws.deShiList.join('、') + ' 合计 ' + (ws.deShi > 0 ? '+' : '') + ws.deShi);
+    if (ws.combineNotes.length) {
+      reasons.push('合化：' + ws.combineNotes.join('；') + '（修正 ' + (ws.combineAdj > 0 ? '+' : '') + ws.combineAdj + '）');
+    }
+    reasons.push('旺衰合计 ' + ws.score + ' → ' + ws.stateText);
+
+    // 喜忌五行（有序）
+    var favWx = [], unfavWx = [];
+    var yongShenText = '';
+    if (fc.is && fc.kind === '从弱') {
+      // 从格：顺从旺势
+      var cnt = {};
+      [pillars.year, pillars.month, pillars.day, pillars.hour].forEach(function (p) {
+        cnt[p.wx] = (cnt[p.wx] || 0) + 1; cnt[p.zwx] = (cnt[p.zwx] || 0) + 0.8;
+        p.hidden.forEach(function (h, i) { cnt[h.wx] = (cnt[h.wx] || 0) + (i === 0 ? 0.8 : 0.4); });
+      });
+      var dom = null, domV = -1;
+      ['木', '火', '土', '金', '水'].forEach(function (w) { var v = cnt[w] || 0; if (v > domV) { domV = v; dom = w; } });
+      favWx = [dom, SHENG[dom], KE[dom]];
+      unfavWx = [dwx, { '木': '水', '火': '木', '土': '火', '金': '土', '水': '金' }[dwx]];
+      yongShenText = '从格，顺' + dom + '之势';
+      reasons.push('从格判定：' + fc.note + '；取' + dom + '及生助' + dom + '者为用');
+    } else if (fc.is && fc.kind === '从强') {
+      favWx = [dwx, { '木': '水', '火': '木', '土': '火', '金': '土', '水': '金' }[dwx], SHENG[dwx]];
+      unfavWx = [KE[dwx], { '木': '金', '火': '水', '土': '木', '金': '火', '水': '土' }[dwx]];
+      yongShenText = '从强，顺' + dwx + '之势';
+      reasons.push('从强判定：' + fc.note);
+    } else {
+      // 正格：先按强弱定方向
+      var baseFav = [], baseUnfav = [];
+      if (ws.state === 'weak') {
+        baseFav = [dwx, { '木': '水', '火': '木', '土': '火', '金': '土', '水': '金' }[dwx]];
+        baseUnfav = [KE[dwx], { '木': '金', '火': '水', '土': '木', '金': '火', '水': '土' }[dwx], SHENG[dwx]];
+      } else if (ws.state === 'strong') {
+        baseFav = [SHENG[dwx], KE[dwx], { '木': '金', '火': '水', '土': '木', '金': '火', '水': '土' }[dwx]];
+        baseUnfav = [dwx, { '木': '水', '火': '木', '土': '火', '金': '土', '水': '金' }[dwx]];
+      } else {
+        // 中和：按格局顺逆取用
+        var inverse = gj.name.indexOf('七杀') >= 0 || gj.name.indexOf('伤官') >= 0;
+        if (inverse) {
+          baseFav = [SHENG[dwx], { '木': '金', '火': '水', '土': '木', '金': '火', '水': '土' }[dwx]];
+          baseUnfav = [dwx, { '木': '水', '火': '木', '土': '火', '金': '土', '水': '金' }[dwx]];
+        } else {
+          baseFav = [KE[dwx], { '木': '金', '火': '水', '土': '木', '金': '火', '水': '土' }[dwx], SHENG[dwx]];
+          baseUnfav = [dwx, { '木': '水', '火': '木', '土': '火', '金': '土', '水': '金' }[dwx]];
+        }
+      }
+      // 调候叠加：调候用神若为五行且缺，提到最前
+      var thWx = [];
+      th.forEach(function (g) {
+        var w = GAN_WX[GAN.indexOf(g)];
+        if (thWx.indexOf(w) < 0) thWx.push(w);
+      });
+      var cnt2 = {};
+      [pillars.year, pillars.month, pillars.day, pillars.hour].forEach(function (p) {
+        cnt2[p.wx] = (cnt2[p.wx] || 0) + 1; cnt2[p.zwx] = (cnt2[p.zwx] || 0) + 0.8;
+      });
+      favWx = baseFav.slice();
+      thWx.forEach(function (w) {
+        if ((cnt2[w] || 0) <= 0.9 && favWx.indexOf(w) < 0) favWx.unshift(w);
+      });
+      favWx = favWx.filter(function (w, i, a) { return a.indexOf(w) === i; });
+      unfavWx = baseUnfav.filter(function (w, i, a) { return a.indexOf(w) === i && favWx.indexOf(w) < 0; });
+      yongShenText = '正格，' + ws.stateText + '取用';
+      reasons.push('格局：' + gj.name + '（' + gj.basis + '）');
+      if (th.length) {
+        reasons.push('调候：' + dg + '生' + ZHI[pillars.month.zhi] + '月，穷通宝鉴取 ' + th.join('、'));
+      }
+    }
+    return {
+      wangShuai: ws, geJu: gj, follow: fc, tiaohou: th,
+      favWx: favWx, unfavWx: unfavWx, yongShenText: yongShenText,
+      reasons: reasons
+    };
+  }
+
+  /** 五行 → 十神组（相对日主五行） */
+  function wxToGodGroup(wx, dayWx) {
+    if (wx === dayWx) return '比';
+    if (wx === SHENG[dayWx]) return '食';
+    if (wx === KE[dayWx]) return '财';
+    for (var i = 0; i < WX_ORDER.length; i++) {
+      if (SHENG[WX_ORDER[i]] === dayWx && WX_ORDER[i] === wx) return '印';
+      if (KE[WX_ORDER[i]] === dayWx && WX_ORDER[i] === wx) return '官';
+    }
+    return '比';
+  }
+
+  var GOD_TEXT = { '印': '印绶', '比': '比劫', '食': '食伤', '财': '财星', '官': '官杀' };
+
+  function computeStrength(pillars) {
+    var dayGan = pillars.day.gan, dwx = GAN_WX[dayGan];
+    var same = 0, other = 0;
+    function addGan(g, w) { var god = tenGod(dayGan, g), grp = godGroup(god); if (grp === '印' || grp === '比') same += w; else other += w; }
+    addGan(pillars.year.gan, 1); addGan(pillars.month.gan, 1); addGan(pillars.day.gan, 1);
+    if (pillars.hour) addGan(pillars.hour.gan, 1);
+    function addZhi(z, w) {
+      HIDDEN[z].forEach(function (g, i) {
+        var god = tenGod(dayGan, GAN.indexOf(g)), grp = godGroup(god);
+        if (grp === '印' || grp === '比') same += w * HIDDEN_W[z][i]; else other += w * HIDDEN_W[z][i];
+      });
+    }
+    addZhi(pillars.year.zhi, 0.8); addZhi(pillars.month.zhi, 1.6);
+    addZhi(pillars.day.zhi, 1.2); if (pillars.hour) addZhi(pillars.hour.zhi, 0.8);
+    var ratio = same / (same + other);
+
+    // 强弱与喜忌以子平判盘为准
+    var j = judgeChart(pillars);
+    var fav = [], unfav = [];
+    j.favWx.forEach(function (w) { var g = wxToGodGroup(w, dwx); if (fav.indexOf(g) < 0) fav.push(g); });
+    j.unfavWx.forEach(function (w) { var g = wxToGodGroup(w, dwx); if (unfav.indexOf(g) < 0) unfav.push(g); });
+    return {
+      same: +same.toFixed(2), other: +other.toFixed(2), ratio: +ratio.toFixed(3),
+      score: j.wangShuai.score,
+      state: j.wangShuai.state, stateText: j.wangShuai.stateText,
+      fav: fav, unfav: unfav,
+      favText: fav.map(function (g) { return GOD_TEXT[g]; }).join('、'),
+      unfavText: unfav.map(function (g) { return GOD_TEXT[g]; }).join('、'),
+      favWx: j.favWx, unfavWx: j.unfavWx,
+      geJu: j.geJu.name, judge: j,
+      tiaohou: null, dayWx: dwx
+    };
+  }
+
+  function branchRel(a, b) {
+    var r = [];
+    if (LIUCHONG[a] === b) r.push('冲');
+    if (LIUHAI[a] === b) r.push('害');
+    if (LIUHE[a] === b) r.push('合');
+    if (ZIXING[a] === b && a === b) r.push('自刑');
+    if ((a === 0 && b === 3) || (a === 3 && b === 0)) r.push('刑');
+    XING3.forEach(function (g) { if (g.indexOf(a) >= 0 && g.indexOf(b) >= 0 && a !== b) r.push('三刑'); });
+    return r;
+  }
+
+  function branchValue(from, to) {
+    if (LIUCHONG[from] === to) return -1;
+    if (LIUHAI[from] === to) return -0.6;
+    if (from === to) return (ZIXING[from] === from) ? -0.7 : 0;
+    if ((from === 0 && to === 3) || (from === 3 && to === 0)) return -0.7;
+    var t3 = false; XING3.forEach(function (g) { if (g.indexOf(from) >= 0 && g.indexOf(to) >= 0) t3 = true; });
+    if (t3) return -0.7;
+    if (LIUHE[from] === to) return 0.7;
+    return 0;
+  }
+
+  function changshengState(dayGan, zhiIdx) {
+    var start = CS_START[dayGan];
+    var yang = GYY[dayGan] === 0;
+    for (var i = 0; i < 12; i++) {
+      var z = yang ? (start + i) % 12 : (start - i + 24) % 12;
+      if (z === zhiIdx) return { name: CHANGSHENG[i], value: CS_VALUE[CHANGSHENG[i]] };
+    }
+    return { name: '—', value: 0 };
+  }
+
+  function godValue(god, state) {
+    var g = godGroup(god);
+    if (state === 'weak') { if (g === '印' || g === '比') return 1; if (g === '食') return -0.3; return -0.6; }
+    if (state === 'strong') { if (g === '食') return 1; if (g === '财') return 0.8; if (g === '官') return 0.5; if (g === '印') return -0.7; return -0.4; }
+    if (g === '财' || g === '官') return 0.5; if (g === '食') return 0.3; return 0;
+  }
+
   function todayPillars(spec, lon, tz) {
     tz = tz || 8;
     var st = solarTime(spec.y, spec.m, spec.d, spec.h, spec.mi, safeLon(lon), tz);
@@ -522,55 +835,6 @@
     };
   }
 
-  function branchRel(a, b) {
-    var r = [];
-    if (LIUCHONG[a] === b) r.push('冲');
-    if (LIUHAI[a] === b) r.push('害');
-    if (LIUHE[a] === b) r.push('合');
-    if (ZIXING[a] === b && a === b) r.push('自刑');
-    if ((a === 0 && b === 3) || (a === 3 && b === 0)) r.push('刑');
-    XING3.forEach(function (g) { if (g.indexOf(a) >= 0 && g.indexOf(b) >= 0 && a !== b) r.push('三刑'); });
-    return r;
-  }
-  function godValue(god, state) {
-    var g = godGroup(god);
-    if (state === 'weak') { if (g === '印' || g === '比') return 1; if (g === '食') return -0.3; return -0.6; }
-    if (state === 'strong') { if (g === '食') return 1; if (g === '财') return 0.8; if (g === '官') return 0.5; if (g === '印') return -0.7; return -0.4; }
-    if (g === '财' || g === '官') return 0.5; if (g === '食') return 0.3; return 0;
-  }
-  var CHANGSHENG = ['长生', '沐浴', '冠带', '临官', '帝旺', '衰', '病', '死', '墓', '绝', '胎', '养'];
-  var CS_START = [11, 6, 2, 9, 2, 9, 5, 0, 8, 3];   // 甲乙丙丁戊己庚辛壬癸 的长生地支
-  var CS_VALUE = { '长生': 1, '临官': 1, '帝旺': 1, '冠带': 0.6, '沐浴': 0.3,
-    '养': -0.3, '胎': -0.3, '衰': -0.6, '病': -0.8, '绝': -0.8, '死': -1, '墓': -1 };
-
-  /** 日主在该地支的十二长生状态 */
-  function changshengState(dayGan, zhiIdx) {
-    var start = CS_START[dayGan];
-    var yang = GYY[dayGan] === 0;
-    for (var i = 0; i < 12; i++) {
-      var z = yang ? (start + i) % 12 : (start - i + 24) % 12;
-      if (z === zhiIdx) return { name: CHANGSHENG[i], value: CS_VALUE[CHANGSHENG[i]] };
-    }
-    return { name: '—', value: 0 };
-  }
-
-  /** 该干支所在旬的空亡地支（旬首 +10、+11） */
-  function xunKong(gzIdx) {
-    var xunStart = Math.floor(gzIdx / 10) * 10;
-    var z = xunStart % 12;
-    return [(z + 10) % 12, (z + 11) % 12];
-  }
-
-  function branchValue(from, to) {
-    if (LIUCHONG[from] === to) return -1;
-    if (LIUHAI[from] === to) return -0.6;
-    if (from === to) return (ZIXING[from] === from) ? -0.7 : 0;
-    if ((from === 0 && to === 3) || (from === 3 && to === 0)) return -0.7;
-    var t3 = false; XING3.forEach(function (g) { if (g.indexOf(from) >= 0 && g.indexOf(to) >= 0) t3 = true; });
-    if (t3) return -0.7;
-    if (LIUHE[from] === to) return 0.7;
-    return 0;
-  }
   function wxValue(from, day) {
     if (from === day) return 0.6;
     if (SHENG[from] === day) return 0.6;
@@ -578,6 +842,17 @@
     if (KE[from] === day) return -0.4;
     return -0.5;
   }
+
+  function xunKong(gzIdx) {
+    var xunStart = Math.floor(gzIdx / 10) * 10;
+    var z = xunStart % 12;
+    return [(z + 10) % 12, (z + 11) % 12];
+  }
+
+  var CHANGSHENG = ['长生', '沐浴', '冠带', '临官', '帝旺', '衰', '病', '死', '墓', '绝', '胎', '养'];
+  var CS_START = [11, 6, 2, 9, 2, 9, 5, 0, 8, 3];
+  var CS_VALUE = { '长生': 1, '临官': 1, '帝旺': 1, '冠带': 0.6, '沐浴': 0.3,
+    '养': -0.3, '胎': -0.3, '衰': -0.6, '病': -0.8, '绝': -0.8, '死': -1, '墓': -1 };
 
   /** 今日运势综合评分 */
   function dailyFortune(chart, spec, lon, tz) {
@@ -728,6 +1003,9 @@
     jdFromUTC: jdFromUTC, jdnOf: jdnOf, jdToCal: jdToCal, jdToLocalStr: jdToLocalStr,
     safeLon: safeLon,
     wuxingPlan: wuxingPlan,
+    judgeChart: judgeChart,
+    wangShuai: wangShuai,
+    tiaoHou: tiaoHou,
     wxGuide: wxGuide,
     gzName: gzName, gzIndex: gzIndex, tenGod: tenGod, godGroup: godGroup,
     solarTime: solarTime, buildChart: buildChart, todayPillars: todayPillars,

@@ -1,7 +1,7 @@
 /**
  * 结果页：今日概览 / 命盘四柱 / 大运流年 / 真太阳时；左上角返回可重新输入
  */
-import { BirthInput, FormData, Chart, Fortune, YearItem, buildChart, dailyFortune, yearList, beijingNow, pad2, formToBirth, wuxingPlan } from '../model/Bazi'
+import { BirthInput, FormData, Chart, Fortune, YearItem, buildChart, dailyFortune, yearList, beijingNow, pad2, formToBirth } from '../model/Bazi'
 import { birthStore } from '../store/BirthStore'
 import { TodayCard } from '../components/TodayCard'
 import { ChartCard } from '../components/ChartCard'
@@ -234,10 +234,7 @@ struct Result {
             .animation({ duration: 420, curve: Curve.EaseOut, delay: 180 })
 
             Column() {
-              WuxingCard({
-                chart: this.chart as Chart,
-                plan: wuxingPlan((this.chart as Chart).strength, (this.chart as Chart).dayWx)
-              })
+              WuxingCard({ chart: this.chart as Chart })
             }
             .width('100%')
             .opacity(this.entered ? 1 : 0)

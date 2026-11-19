@@ -111,6 +111,16 @@ export interface Strength {
   unfavText: string
   dayWx: string
   tiaohou: string
+  /** 子平判盘得分 */
+  score: number
+  /** 格局名 */
+  geJu: string
+  /** 喜用五行（有序） */
+  favWx: string[]
+  /** 忌神五行 */
+  unfavWx: string[]
+  /** 完整判盘结果 */
+  judge: JudgeResult
 }
 
 export interface YunStep {
@@ -661,7 +671,33 @@ function buildPillar(gz: number, dayGan: number): Pillar {
   }
 }
 
+function wxToGodGroup(wx: string, dayWx: string): string {
+  if (wx === dayWx) {
+    return '比'
+  }
+  if (wx === sheng(dayWx)) {
+    return '食'
+  }
+  if (wx === ke(dayWx)) {
+    return '财'
+  }
+  for (let i = 0; i < WX_ORDER.length; i++) {
+    if (sheng(WX_ORDER[i]) === dayWx && WX_ORDER[i] === wx) {
+      return '印'
+    }
+    if (ke(WX_ORDER[i]) === dayWx && WX_ORDER[i] === wx) {
+      return '官'
+    }
+  }
+  return '比'
+}
+
+const GOD_TEXT: Map<string, string> = new Map([
+  ['印', '印绶'], ['比', '比劫'], ['食', '食伤'], ['财', '财星'], ['官', '官杀']
+])
+
 function computeStrength(year: Pillar, month: Pillar, day: Pillar, hour: Pillar, dayGan: number): Strength {
+  const dwx: string = GAN_WX[dayGan]
   let same: number = 0
   let other: number = 0
   const addGan: (g: number, w: number) => void = (g: number, w: number): void => {
@@ -672,83 +708,72 @@ function computeStrength(year: Pillar, month: Pillar, day: Pillar, hour: Pillar,
       other += w
     }
   }
-  const addZhi: (z: number, w: number) => void = (z: number, w: number): void => {
-    const stems: string[] = HIDDEN[z]
-    for (let i = 0; i < stems.length; i++) {
-      const grp: string = godGroup(tenGod(dayGan, ganIdx(stems[i])))
-      const v: number = w * HIDDEN_W[z][i]
-      if (grp === '印' || grp === '比') {
-        same += v
-      } else {
-        other += v
-      }
-    }
-  }
   addGan(year.gan, 1)
   addGan(month.gan, 1)
   addGan(day.gan, 1)
-  if (hour.gan >= 0) {
-    addGan(hour.gan, 1)
+  addGan(hour.gan, 1)
+  const addZhi: (z: number, w: number) => void = (z: number, w: number): void => {
+    const hidden: string[] = HIDDEN[z]
+    for (let i = 0; i < hidden.length; i++) {
+      const grp: string = godGroup(tenGod(dayGan, GAN.indexOf(hidden[i])))
+      const ww: number = w * HIDDEN_W[z][i]
+      if (grp === '印' || grp === '比') {
+        same += ww
+      } else {
+        other += ww
+      }
+    }
   }
   addZhi(year.zhi, 0.8)
   addZhi(month.zhi, 1.6)
   addZhi(day.zhi, 1.2)
-  if (hour.zhi >= 0) {
-    addZhi(hour.zhi, 0.8)
-  }
+  addZhi(hour.zhi, 0.8)
   const ratio: number = same / (same + other)
-  const state: string = ratio > 0.56 ? 'strong' : (ratio < 0.44 ? 'weak' : 'mid')
-  const mz: number = month.zhi
-  let tiaohou: string = ''
-  if (mz === 11 || mz === 0 || mz === 1) {
-    tiaohou = '火'
-  } else if (mz === 5 || mz === 6 || mz === 7) {
-    tiaohou = '水'
-  }
-  let fav: string[] = []
-  let unfav: string[] = []
-  if (state === 'weak') {
-    fav = ['印', '比']
-    unfav = ['食', '财', '官']
-  } else if (state === 'strong') {
-    fav = ['食', '财', '官']
-    unfav = ['印', '比']
-  } else {
-    fav = ['财', '官', '食']
-    unfav = ['比']
-  }
-  if (tiaohou.length > 0) {
-    fav = fav.slice()
-    const extra: string = tiaohou === '火' ? '食' : '财'
-    if (fav.indexOf(extra) < 0) {
-      fav.push(extra)
+
+  // 强弱与喜忌以子平判盘为准
+  const ps: PillarSet = { year: year, month: month, day: day, hour: hour }
+  const j: JudgeResult = judgeChart(ps)
+  const fav: string[] = []
+  const unfav: string[] = []
+  for (let i = 0; i < j.favWx.length; i++) {
+    const g: string = wxToGodGroup(j.favWx[i], dwx)
+    if (fav.indexOf(g) < 0) {
+      fav.push(g)
     }
   }
-  const labelMap: Map<string, string> = new Map([
-    ['印', '印绶'], ['比', '比劫'], ['食', '食伤'], ['财', '财星'], ['官', '官杀']
-  ])
-  const names: string[] = []
-  for (let i = 0; i < fav.length; i++) {
-    const v: string | undefined = labelMap.get(fav[i])
-    names.push(v === undefined ? fav[i] : v)
+  for (let i = 0; i < j.unfavWx.length; i++) {
+    const g: string = wxToGodGroup(j.unfavWx[i], dwx)
+    if (unfav.indexOf(g) < 0) {
+      unfav.push(g)
+    }
   }
-  const unames: string[] = []
+  const favTexts: string[] = []
+  for (let i = 0; i < fav.length; i++) {
+    const t: string | undefined = GOD_TEXT.get(fav[i])
+    favTexts.push(t === undefined ? fav[i] : t)
+  }
+  const unfavTexts: string[] = []
   for (let i = 0; i < unfav.length; i++) {
-    const v: string | undefined = labelMap.get(unfav[i])
-    unames.push(v === undefined ? unfav[i] : v)
+    const t: string | undefined = GOD_TEXT.get(unfav[i])
+    unfavTexts.push(t === undefined ? unfav[i] : t)
   }
   return {
     same: Math.round(same * 100) / 100,
     other: Math.round(other * 100) / 100,
     ratio: Math.round(ratio * 1000) / 1000,
-    state: state,
-    stateText: state === 'strong' ? '身强' : (state === 'weak' ? '身弱' : '中和'),
+    state: j.wangShuai.state,
+    stateText: j.wangShuai.stateText,
     fav: fav,
     unfav: unfav,
-    favText: names.join('、'),
-    unfavText: unames.join('、'),
-    dayWx: GAN_WX[dayGan],
-    tiaohou: tiaohou
+    favText: favTexts.join('、'),
+    unfavText: unfavTexts.join('、'),
+    dayWx: dwx,
+    tiaohou: '',
+    score: j.wangShuai.score,
+    geJu: j.geJu.name,
+    favWx: j.favWx,
+    unfavWx: j.unfavWx,
+    judge: j
   }
 }
 
@@ -818,6 +843,508 @@ function godGroupToWx(group: string, dayWx: string): string {
 }
 
 /** 由喜用神推出「该补的五行」与「该忌的五行」 */
+/* ================= 子平判盘：旺衰 / 格局 / 调候 / 从格 ================= */
+
+/** 只取四柱的结构型接口（Chart 与 Pillars 都满足） */
+export interface PillarSet {
+  year: Pillar
+  month: Pillar
+  day: Pillar
+  hour: Pillar
+}
+
+export interface WangShuai {
+  score: number
+  state: string
+  stateText: string
+  lingRank: string
+  lingVal: number
+  season: string
+  deDi: number
+  deDiList: string[]
+  deShi: number
+  deShiList: string[]
+  combineAdj: number
+  combineNotes: string[]
+}
+
+export interface GeJu {
+  name: string
+  basis: string
+}
+
+export interface FollowCheck {
+  isFollow: boolean
+  kind: string
+  note: string
+}
+
+export interface JudgeResult {
+  wangShuai: WangShuai
+  geJu: GeJu
+  follow: FollowCheck
+  tiaohou: string[]
+  favWx: string[]
+  unfavWx: string[]
+  yongShenText: string
+  reasons: string[]
+}
+
+const LUS: Map<string, number> = new Map([
+  ['甲', 2], ['乙', 3], ['丙', 5], ['丁', 6], ['戊', 5], ['己', 6], ['庚', 8], ['辛', 9], ['壬', 11], ['癸', 0]
+])
+const RENS: Map<string, number> = new Map([
+  ['甲', 3], ['乙', 2], ['丙', 6], ['丁', 5], ['戊', 6], ['己', 5], ['庚', 9], ['辛', 8], ['壬', 0], ['癸', 11]
+])
+/** 三合局：[支1,支2,支3,化五行] */
+const SANHE: number[][] = [[8, 0, 4], [11, 3, 7], [2, 6, 10], [5, 9, 1]]
+const SANHE_WX: string[] = ['水', '木', '火', '金']
+const SANHUI: number[][] = [[2, 3, 4], [5, 6, 7], [8, 9, 10], [11, 0, 1]]
+const SANHUI_WX: string[] = ['木', '火', '金', '水']
+const LIUHE_PAIR: number[][] = [[0, 1], [2, 11], [3, 10], [4, 9], [5, 8], [6, 7]]
+const LIUHE_WX2: string[] = ['土', '木', '火', '金', '水', '火']
+
+const SEASON_OF: Map<number, string> = new Map([
+  [2, '春'], [3, '春'], [5, '夏'], [6, '夏'], [8, '秋'], [9, '秋'],
+  [11, '冬'], [0, '冬'], [1, '四季'], [4, '四季'], [7, '四季'], [10, '四季']
+])
+const RANK_VAL: Map<string, number> = new Map([
+  ['旺', 2], ['相', 1], ['休', 0], ['囚', -1], ['死', -2]
+])
+
+function deLingTable(season: string): Map<string, string> {
+  const t: Map<string, string> = new Map()
+  if (season === '春') {
+    t.set('旺', '木'); t.set('相', '火'); t.set('休', '水'); t.set('囚', '金'); t.set('死', '土')
+  } else if (season === '夏') {
+    t.set('旺', '火'); t.set('相', '土'); t.set('休', '木'); t.set('囚', '水'); t.set('死', '金')
+  } else if (season === '秋') {
+    t.set('旺', '金'); t.set('相', '水'); t.set('休', '土'); t.set('囚', '火'); t.set('死', '木')
+  } else if (season === '冬') {
+    t.set('旺', '水'); t.set('相', '木'); t.set('休', '金'); t.set('囚', '土'); t.set('死', '火')
+  } else {
+    t.set('旺', '土'); t.set('相', '金'); t.set('休', '火'); t.set('囚', '木'); t.set('死', '水')
+  }
+  return t
+}
+
+/** 生我者 */
+export function wxProducedBy(dayWx: string): string {
+  for (let i = 0; i < WX_ORDER.length; i++) {
+    if (sheng(WX_ORDER[i]) === dayWx) {
+      return WX_ORDER[i]
+    }
+  }
+  return dayWx
+}
+
+/** 克我者 */
+export function wxControlledBy(dayWx: string): string {
+  for (let i = 0; i < WX_ORDER.length; i++) {
+    if (ke(WX_ORDER[i]) === dayWx) {
+      return WX_ORDER[i]
+    }
+  }
+  return dayWx
+}
+
+/** 合化修正 */
+export interface CombineMod {
+  wx: string
+  v: number
+  note: string
+}
+
+export function combineMods(p: PillarSet): CombineMod[] {
+  const z: number[] = [p.year.zhi, p.month.zhi, p.day.zhi, p.hour.zhi]
+  const out: CombineMod[] = []
+  for (let i = 0; i < SANHUI.length; i++) {
+    const g: number[] = SANHUI[i]
+    let n: number = 0
+    for (let k = 0; k < 3; k++) {
+      if (z.indexOf(g[k]) >= 0) {
+        n++
+      }
+    }
+    if (n === 3) {
+      out.push({ wx: SANHUI_WX[i], v: 3, note: ZHI[g[0]] + ZHI[g[1]] + ZHI[g[2]] + '三会' + SANHUI_WX[i] + '局' })
+    }
+  }
+  for (let i = 0; i < SANHE.length; i++) {
+    const g: number[] = SANHE[i]
+    let n: number = 0
+    for (let k = 0; k < 3; k++) {
+      if (z.indexOf(g[k]) >= 0) {
+        n++
+      }
+    }
+    if (n === 3) {
+      out.push({ wx: SANHE_WX[i], v: 2.2, note: ZHI[g[0]] + ZHI[g[1]] + ZHI[g[2]] + '三合' + SANHE_WX[i] + '局' })
+    }
+  }
+  for (let i = 0; i < LIUHE_PAIR.length; i++) {
+    const a: number = LIUHE_PAIR[i][0]
+    const b: number = LIUHE_PAIR[i][1]
+    if (z.indexOf(a) >= 0 && z.indexOf(b) >= 0) {
+      out.push({ wx: LIUHE_WX2[i], v: 0.6, note: ZHI[a] + ZHI[b] + '六合化' + LIUHE_WX2[i] })
+    }
+  }
+  return out
+}
+
+/** 旺衰：得令 + 得地 + 得势，含合化修正 */
+export function wangShuaiOf(p: PillarSet): WangShuai {
+  const dg: string = GAN[p.day.gan]
+  const dwx: string = GAN_WX[p.day.gan]
+  const season: string = SEASON_OF.get(p.month.zhi) === undefined ? '四季' : SEASON_OF.get(p.month.zhi) as string
+  const tbl: Map<string, string> = deLingTable(season)
+  let lingRank: string = ''
+  let lingVal: number = 0
+  const ranks: string[] = ['旺', '相', '休', '囚', '死']
+  for (let i = 0; i < ranks.length; i++) {
+    const w: string | undefined = tbl.get(ranks[i])
+    if (w === dwx) {
+      lingRank = ranks[i]
+      const v: number | undefined = RANK_VAL.get(ranks[i])
+      lingVal = v === undefined ? 0 : v
+    }
+  }
+
+  const deDiList: string[] = []
+  let deDi: number = 0
+  const zhis: number[] = [p.year.zhi, p.month.zhi, p.day.zhi, p.hour.zhi]
+  for (let i = 0; i < zhis.length; i++) {
+    const zi: number = zhis[i]
+    if (zi < 0) {
+      continue
+    }
+    const zwx: string = ZHI_WX[zi]
+    let v: number = 0
+    if (zwx === dwx) {
+      v = 1.0
+    } else if (sheng(zwx) === dwx) {
+      if (zi === 1 || zi === 4) {
+        v = 0.7
+      } else if (zi === 7 || zi === 10) {
+        v = 0.25
+      } else {
+        v = 0.6
+      }
+    }
+    if (v > 0) {
+      deDi += v
+      deDiList.push(ZHI[zi] + '+' + v.toString())
+    }
+  }
+
+  const deShiList: string[] = []
+  let deShi: number = 0
+  const gans: number[] = [p.year.gan, p.month.gan, p.hour.gan]
+  for (let i = 0; i < gans.length; i++) {
+    const gi: number = gans[i]
+    if (gi < 0) {
+      continue
+    }
+    const wx: string = GAN_WX[gi]
+    let v: number = 0
+    if (wx === dwx) {
+      v = 0.8
+    } else if (sheng(wx) === dwx) {
+      v = 0.5
+    } else if (ke(dwx) === wx) {
+      v = -0.4
+    } else if (ke(wx) === dwx) {
+      v = -0.9
+    } else if (sheng(dwx) === wx) {
+      v = -0.4
+    }
+    deShi += v
+    deShiList.push(GAN[gi] + (v > 0 ? '+' : '') + v.toString())
+  }
+
+  const cm: CombineMod[] = combineMods(p)
+  const helpWx: string = wxProducedBy(dwx)
+  let combineAdj: number = 0
+  const notes: string[] = []
+  for (let i = 0; i < cm.length; i++) {
+    const m: CombineMod = cm[i]
+    notes.push(m.note)
+    if (m.wx === dwx) {
+      combineAdj += m.v * 0.5
+    } else if (m.wx === helpWx) {
+      combineAdj += m.v * 0.3
+    } else if (m.wx === sheng(dwx)) {
+      combineAdj -= m.v * 0.35
+    } else if (m.wx === ke(dwx)) {
+      combineAdj -= m.v * 0.3
+    } else {
+      combineAdj -= m.v * 0.45
+    }
+  }
+
+  const score: number = lingVal + deDi + deShi + combineAdj
+  const state: string = score > 1.5 ? 'strong' : (score < -1.0 ? 'weak' : 'mid')
+  const stText: string = state === 'strong' ? '身强' : (state === 'weak' ? '身弱' : '中和')
+  return {
+    score: Math.round(score * 100) / 100,
+    state: state,
+    stateText: stText,
+    lingRank: lingRank,
+    lingVal: lingVal,
+    season: season,
+    deDi: Math.round(deDi * 100) / 100,
+    deDiList: deDiList,
+    deShi: Math.round(deShi * 100) / 100,
+    deShiList: deShiList,
+    combineAdj: Math.round(combineAdj * 100) / 100,
+    combineNotes: notes
+  }
+}
+
+/** 格局：建禄/月劫/月令透干 */
+export function geJuOf(p: PillarSet): GeJu {
+  const dg: string = GAN[p.day.gan]
+  const mzi: number = p.month.zhi
+  const lu: number | undefined = LUS.get(dg)
+  const ren: number | undefined = RENS.get(dg)
+  if (lu !== undefined && lu === mzi) {
+    return { name: '建禄格', basis: dg + '禄在' + ZHI[mzi] }
+  }
+  if (ren !== undefined && ren === mzi) {
+    return { name: '月劫(羊刃)格', basis: dg + '刃在' + ZHI[mzi] }
+  }
+  const gans: string[] = [GAN[p.year.gan], GAN[p.month.gan], GAN[p.day.gan], GAN[p.hour.gan]]
+  const hidden: string[] = HIDDEN[mzi]
+  let foundGan: string = ''
+  let foundGod: string = ''
+  let foundPos: string = ''
+  for (let i = 0; i < hidden.length; i++) {
+    const g: string = hidden[i]
+    const gi: number = GAN.indexOf(g)
+    const god: string = tenGod(p.day.gan, gi)
+    const tou: boolean = gans.indexOf(g) >= 0 && gi !== p.day.gan
+    if (tou && foundGan.length === 0) {
+      foundGan = g
+      foundGod = god
+      foundPos = i === 0 ? '本气' : (i === 1 ? '中气' : '余气')
+    }
+  }
+  if (foundGan.length === 0) {
+    const g0: string = hidden[0]
+    foundGan = g0
+    foundGod = tenGod(p.day.gan, GAN.indexOf(g0))
+    foundPos = '本气(未透)'
+  }
+  let name: string = '杂格'
+  if (foundGod === '正官') {
+    name = '正官格'
+  } else if (foundGod === '七杀') {
+    name = '七杀格'
+  } else if (foundGod === '正财') {
+    name = '正财格'
+  } else if (foundGod === '偏财') {
+    name = '偏财格'
+  } else if (foundGod === '正印') {
+    name = '正印格'
+  } else if (foundGod === '偏印') {
+    name = '偏印格'
+  } else if (foundGod === '食神') {
+    name = '食神格'
+  } else if (foundGod === '伤官') {
+    name = '伤官格'
+  } else if (foundGod === '比肩') {
+    name = '比肩格'
+  } else if (foundGod === '劫财') {
+    name = '月劫格'
+  }
+  return { name: name, basis: '月令' + ZHI[mzi] + '藏' + foundGan + '(' + foundGod + ',' + foundPos + ')' }
+}
+
+/** 从格检测 */
+export function followCheckOf(p: PillarSet, ws: WangShuai): FollowCheck {
+  const dwx: string = GAN_WX[p.day.gan]
+  const zhis: number[] = [p.year.zhi, p.month.zhi, p.day.zhi, p.hour.zhi]
+  let hasRoot: boolean = false
+  let hasYin: boolean = false
+  for (let i = 0; i < zhis.length; i++) {
+    if (zhis[i] < 0) {
+      continue
+    }
+    if (ZHI_WX[zhis[i]] === dwx) {
+      hasRoot = true
+    }
+    if (sheng(ZHI_WX[zhis[i]]) === dwx) {
+      hasYin = true
+    }
+  }
+  if (ws.score <= -3.2 && !hasRoot && !hasYin) {
+    return { isFollow: true, kind: '从弱', note: '日主无根无印、四柱一边倒，作从格论（不作身弱用印比）' }
+  }
+  if (ws.score >= 4.5 && !hasYin) {
+    return { isFollow: true, kind: '从强', note: '日主极旺无制，作从强（专旺）论' }
+  }
+  return { isFollow: false, kind: '', note: '' }
+}
+
+/** 调候用神表（穷通宝鉴通行表）：日干 → 12 个月支的用神序列 */
+function tiaoHouTable(dg: string): string[][] {
+  if (dg === '甲') {
+    return [['癸', '丙'], ['丙', '癸'], ['庚', '丙', '丁'], ['癸', '丁', '庚'], ['癸', '丁', '庚'],
+      ['癸', '丁', '庚'], ['庚', '丁', '壬'], ['庚', '丙', '丁'], ['庚', '甲', '丁', '壬'],
+      ['庚', '丁', '丙', '戊'], ['丁', '庚', '丙'], ['丁', '庚', '丙']]
+  } else if (dg === '乙') {
+    return [['丙', '癸'], ['丙', '癸'], ['癸', '丙', '戊'], ['癸'], ['癸', '丙'], ['癸', '丙'],
+      ['丙', '癸', '己'], ['癸', '丙', '丁'], ['癸', '辛'], ['丙', '戊'], ['丙'], ['丙']]
+  } else if (dg === '丙') {
+    return [['壬', '庚'], ['壬', '己'], ['壬', '甲'], ['壬', '癸', '庚'], ['壬', '庚'], ['壬', '庚'],
+      ['壬', '戊'], ['壬', '癸'], ['甲', '壬'], ['甲', '戊', '庚', '壬'], ['壬', '戊', '己'], ['壬', '甲']]
+  } else if (dg === '丁') {
+    return [['甲', '庚'], ['庚', '甲'], ['甲', '庚'], ['甲', '庚'], ['壬', '庚', '癸'], ['甲', '壬', '庚'],
+      ['甲', '庚', '丙', '戊'], ['甲', '庚', '丙', '戊'], ['甲', '庚', '戊'], ['甲', '庚'], ['甲', '庚'], ['甲', '庚']]
+  } else if (dg === '戊') {
+    return [['丙', '甲', '癸'], ['丙', '甲', '癸'], ['甲', '丙', '癸'], ['甲', '丙', '癸'], ['壬', '甲', '丙'],
+      ['癸', '丙', '甲'], ['丙', '癸', '甲'], ['丙', '癸'], ['甲', '丙', '癸'], ['甲', '丙'], ['丙', '甲'], ['丙', '甲']]
+  } else if (dg === '己') {
+    return [['丙', '庚', '甲'], ['甲', '癸', '丙'], ['丙', '癸', '甲'], ['癸', '丙'], ['癸', '丙'], ['癸', '丙'],
+      ['丙', '癸'], ['丙', '癸'], ['甲', '丙', '癸'], ['丙', '甲', '戊'], ['丙', '甲', '戊'], ['丙', '甲', '戊']]
+  } else if (dg === '庚') {
+    return [['戊', '甲', '壬', '丙', '丁'], ['丁', '甲', '庚', '丙'], ['甲', '丁', '壬', '癸'], ['壬', '戊', '丙', '丁'],
+      ['壬', '癸'], ['丁', '甲'], ['丁', '甲'], ['丁', '甲', '丙'], ['甲', '壬'], ['丁', '丙'], ['丁', '甲', '丙'],
+      ['丙', '丁', '甲']]
+  } else if (dg === '辛') {
+    return [['己', '壬', '庚'], ['壬', '甲'], ['壬', '甲'], ['壬', '甲', '癸'], ['壬', '己', '癸'],
+      ['壬', '庚', '甲'], ['壬', '甲', '戊'], ['壬', '甲'], ['壬', '甲'], ['壬', '丙'], ['丙', '戊', '壬', '甲'],
+      ['丙', '壬', '戊', '己']]
+  } else if (dg === '壬') {
+    return [['庚', '丙', '戊'], ['戊', '辛', '庚'], ['甲', '庚'], ['壬', '辛', '庚', '癸'], ['癸', '庚', '辛'],
+      ['辛', '甲'], ['戊', '丁'], ['甲', '庚'], ['甲', '丙'], ['戊', '丙', '庚'], ['戊', '丙'], ['丙', '丁', '甲']]
+  }
+  return [['辛', '丙'], ['庚', '辛'], ['丙', '辛', '甲'], ['辛'], ['庚', '辛', '壬', '癸'], ['庚', '辛', '壬', '癸'],
+    ['丁'], ['辛', '丙'], ['辛', '甲', '壬', '癸'], ['庚', '辛', '戊', '丁'], ['丙', '辛'], ['丙', '丁']]
+}
+
+export function tiaoHouOf(dg: string, mzi: number): string[] {
+  const row: string[][] = tiaoHouTable(dg)
+  if (mzi < 0 || mzi > 11) {
+    return []
+  }
+  // 表按「寅月」起排：(月支序号 - 2 + 12) % 12
+  return row[(mzi - 2 + 12) % 12]
+}
+
+/** 综合判盘 */
+export function judgeChart(p: PillarSet): JudgeResult {
+  const dg: string = GAN[p.day.gan]
+  const dwx: string = GAN_WX[p.day.gan]
+  const ws: WangShuai = wangShuaiOf(p)
+  const gj: GeJu = geJuOf(p)
+  const fc: FollowCheck = followCheckOf(p, ws)
+  const th: string[] = tiaoHouOf(dg, p.month.zhi)
+  const reasons: string[] = []
+  reasons.push('得令：月令' + ZHI[p.month.zhi] + '属' + ws.season + '，' + dg + dwx + '为「' +
+    ws.lingRank + '」计 ' + (ws.lingVal > 0 ? '+' : '') + ws.lingVal.toString())
+  reasons.push('得地：' + (ws.deDiList.length > 0 ? ws.deDiList.join('、') : '无') + ' 合计 ' +
+    (ws.deDi > 0 ? '+' : '') + ws.deDi.toString())
+  reasons.push('得势：' + ws.deShiList.join('、') + ' 合计 ' + (ws.deShi > 0 ? '+' : '') + ws.deShi.toString())
+  if (ws.combineNotes.length > 0) {
+    reasons.push('合化：' + ws.combineNotes.join('；') + '（修正 ' + (ws.combineAdj > 0 ? '+' : '') +
+      ws.combineAdj.toString() + '）')
+  }
+  reasons.push('旺衰合计 ' + ws.score.toString() + ' → ' + ws.stateText)
+
+  let favWx: string[] = []
+  let unfavWx: string[] = []
+  let yongShenText: string = ''
+  const helpWx: string = wxProducedBy(dwx)
+  const ctrlBy: string = wxControlledBy(dwx)
+  if (fc.isFollow && fc.kind === '从弱') {
+    const cnt: Map<string, number> = new Map()
+    const ps: Pillar[] = [p.year, p.month, p.day, p.hour]
+    for (let i = 0; i < ps.length; i++) {
+      const q: Pillar = ps[i]
+      cnt.set(q.wx, (cnt.get(q.wx) === undefined ? 0 : cnt.get(q.wx) as number) + 1)
+      cnt.set(q.zwx, (cnt.get(q.zwx) === undefined ? 0 : cnt.get(q.zwx) as number) + 0.8)
+      for (let h = 0; h < q.hidden.length; h++) {
+        const hw: string = q.hidden[h].wx
+        cnt.set(hw, (cnt.get(hw) === undefined ? 0 : cnt.get(hw) as number) + (h === 0 ? 0.8 : 0.4))
+      }
+    }
+    let dom: string = dwx
+    let domV: number = -1
+    for (let i = 0; i < WX_ORDER.length; i++) {
+      const v: number = cnt.get(WX_ORDER[i]) === undefined ? 0 : cnt.get(WX_ORDER[i]) as number
+      if (v > domV) {
+        domV = v
+        dom = WX_ORDER[i]
+      }
+    }
+    favWx = [dom, sheng(dom), ke(dom)]
+    unfavWx = [dwx, helpWx]
+    yongShenText = '从格，顺' + dom + '之势'
+    reasons.push('从格判定：' + fc.note + '；取' + dom + '及生助' + dom + '者为用')
+  } else if (fc.isFollow && fc.kind === '从强') {
+    favWx = [dwx, helpWx, sheng(dwx)]
+    unfavWx = [ke(dwx), ctrlBy]
+    yongShenText = '从强，顺' + dwx + '之势'
+    reasons.push('从强判定：' + fc.note)
+  } else {
+    let baseFav: string[] = []
+    let baseUnfav: string[] = []
+    if (ws.state === 'weak') {
+      baseFav = [dwx, helpWx]
+      baseUnfav = [ke(dwx), ctrlBy, sheng(dwx)]
+    } else if (ws.state === 'strong') {
+      baseFav = [sheng(dwx), ke(dwx), ctrlBy]
+      baseUnfav = [dwx, helpWx]
+    } else if (gj.name.indexOf('七杀') >= 0 || gj.name.indexOf('伤官') >= 0) {
+      baseFav = [sheng(dwx), ctrlBy]
+      baseUnfav = [dwx, helpWx]
+    } else {
+      baseFav = [ke(dwx), ctrlBy, sheng(dwx)]
+      baseUnfav = [dwx, helpWx]
+    }
+    // 调候：用神五行若原局很弱，提到最前
+    const thWx: string[] = []
+    for (let i = 0; i < th.length; i++) {
+      const gi: number = GAN.indexOf(th[i])
+      if (gi >= 0) {
+        const w: string = GAN_WX[gi]
+        if (thWx.indexOf(w) < 0) {
+          thWx.push(w)
+        }
+      }
+    }
+    const cnt2: Map<string, number> = new Map()
+    const ps2: Pillar[] = [p.year, p.month, p.day, p.hour]
+    for (let i = 0; i < ps2.length; i++) {
+      const q: Pillar = ps2[i]
+      cnt2.set(q.wx, (cnt2.get(q.wx) === undefined ? 0 : cnt2.get(q.wx) as number) + 1)
+      cnt2.set(q.zwx, (cnt2.get(q.zwx) === undefined ? 0 : cnt2.get(q.zwx) as number) + 0.8)
+    }
+    favWx = baseFav.slice()
+    for (let i = 0; i < thWx.length; i++) {
+      const w: string = thWx[i]
+      const c: number = cnt2.get(w) === undefined ? 0 : cnt2.get(w) as number
+      if (c <= 0.9 && favWx.indexOf(w) < 0) {
+        favWx.unshift(w)
+      }
+    }
+    favWx = favWx.filter((w: string, i: number, a: string[]): boolean => a.indexOf(w) === i)
+    unfavWx = baseUnfav.filter((w: string, i: number, a: string[]): boolean =>
+      a.indexOf(w) === i && favWx.indexOf(w) < 0)
+    yongShenText = '正格，' + ws.stateText + '取用'
+    reasons.push('格局：' + gj.name + '（' + gj.basis + '）')
+    if (th.length > 0) {
+      reasons.push('调候：' + dg + '生' + ZHI[p.month.zhi] + '月，穷通宝鉴取 ' + th.join('、'))
+    }
+  }
+  return {
+    wangShuai: ws, geJu: gj, follow: fc, tiaohou: th,
+    favWx: favWx, unfavWx: unfavWx, yongShenText: yongShenText,
+    reasons: reasons
+  }
+}
+
 export function wuxingPlan(strength: Strength, dayWx: string): WuxingPlan {
   const fav: string[] = []
   const unfav: string[] = []
