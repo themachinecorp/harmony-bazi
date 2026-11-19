@@ -1,7 +1,7 @@
 /**
  * 生辰录入页：填信息 → 排盘 → 跳转结果页
  */
-import { FormData, CITIES, formToBirth } from '../model/Bazi'
+import { BirthInput, FormData, CITIES, formToBirth } from '../model/Bazi'
 import { birthStore } from '../store/BirthStore'
 import { InputCard } from '../components/InputCard'
 import { Theme } from '../model/Theme'
@@ -63,16 +63,21 @@ struct Index {
   }
 
   async compute(): Promise<void> {
-    // 提交前校验格式（日期 1994-06-14 / 时间 14:30 / 经度 -180~180）
-    if (formToBirth(this.form) === null) {
-      this.getUIContext().getPromptAction().showToast({ message: '出生地经度格式不对（应为 106.55 这类小数）' })
-      return
+    try {
+      const o: BirthInput | null = formToBirth(this.form)
+      if (o === null) {
+        this.getUIContext().getPromptAction().showToast({
+          message: '参数不合法：' + this.form.dateStr + ' ' + this.form.timeStr + ' 经度' + this.form.lonStr
+        })
+        return
+      }
+      birthStore.setQueried(this.form)
+      birthStore.setDraft(this.form)
+      await birthStore.save(this.form)
+      this.getUIContext().getRouter().pushUrl({ url: 'pages/Result' })
+    } catch (e) {
+      this.getUIContext().getPromptAction().showToast({ message: '排盘失败：' + (e as Error).message })
     }
-    // 记住「最近一次查询」：返回时表单据此回填，结果页也读它
-    birthStore.setQueried(this.form)
-    birthStore.setDraft(this.form)
-    await birthStore.save(this.form)
-    this.getUIContext().getRouter().pushUrl({ url: 'pages/Result' })
   }
 
   private formSummary(): string {

@@ -22,6 +22,10 @@ struct Result {
   /** 背景光斑漂移开关 */
   @State private glow: boolean = false
   @State private cursor: boolean = false
+  /** 载入失败的原因（不再静默挂在“正在读取…”） */
+  @State private errorMsg: string = ''
+  /** 从 store 读到的原始值，便于定位 */
+  @State private rawInfo: string = ''
 
   aboutToAppear(): void {
     setTimeout(() => { this.glow = true }, 120)
@@ -30,7 +34,6 @@ struct Result {
       setTimeout(bl, 520)
     }
     setTimeout(bl, 300)
-    this.load()
   }
 
   onPageShow(): void {
@@ -47,32 +50,40 @@ struct Result {
 
   async load(): Promise<void> {
     // 每次进入都重新取数并重算，杜绝显示上一次的旧结果
+    this.errorMsg = ''
+    this.rawInfo = ''
     this.chart = null
     this.fortune = null
     this.years = []
-    let fd: FormData | null = birthStore.getQueried()
-    if (fd === null) {
-      fd = await birthStore.load()
+    this.summary = ''
+    try {
+      let fd: FormData | null = birthStore.getQueried()
+      if (fd === null) {
+        fd = await birthStore.load()
+      }
+      if (fd === null) {
+        this.errorMsg = '没有读到生辰数据（store 为空）'
+        return
+      }
+      this.rawInfo = '收到：' + fd.dateStr + ' ' + fd.timeStr + ' 经度 ' + fd.lonStr
+      const parsed: BirthInput | null = formToBirth(fd)
+      if (parsed === null) {
+        this.errorMsg = '生辰格式不合法：' + this.rawInfo
+        return
+      }
+      const o: BirthInput = parsed
+      const c: Chart = buildChart(o)
+      const spec = beijingNow()
+      const ft: Fortune = dailyFortune(c, spec, o.lon, 8)
+      this.fortune = ft
+      this.years = yearList(c, spec.y - 2, spec.y + 5)
+      this.summary = fd.dateStr + ' ' + fd.timeStr + '　经度 ' + fd.lonStr + '°E　真太阳时 ' +
+        c.solar.trueStr.substring(0, 16)
+      this.chart = c
+      setTimeout(() => { this.entered = true }, 40)
+    } catch (e) {
+      this.errorMsg = '排盘异常：' + (e as Error).message
     }
-    if (fd === null) {
-      this.getUIContext().getRouter().back()
-      return
-    }
-    const parsed: BirthInput | null = formToBirth(fd)
-    if (parsed === null) {
-      this.getUIContext().getRouter().back()
-      return
-    }
-    const o: BirthInput = parsed
-    const c: Chart = buildChart(o)
-    const spec = beijingNow()
-    const ft: Fortune = dailyFortune(c, spec, o.lon, 8)
-    this.chart = c
-    this.fortune = ft
-    this.years = yearList(c, spec.y - 2, spec.y + 5)
-    this.summary = fd.dateStr + ' ' + fd.timeStr + '　经度 ' + fd.lonStr + '°E　真太阳时 ' +
-      c.solar.trueStr.substring(0, 16)
-    setTimeout(() => { this.entered = true }, 40)
   }
 
   /** 返回录入页：先打标记，让录入页回填最近一次查询的信息 */
@@ -257,8 +268,20 @@ struct Result {
         .layoutWeight(1)
         .scrollBar(BarState.Off)
       } else {
-        Column({ space: 10 }) {
-          Text('正在读取生辰…').fontSize(14).fontColor(Theme.DIM)
+        Column({ space: 12 }) {
+          if (this.errorMsg.length > 0) {
+            Text('✗ ' + this.errorMsg)
+              .fontSize(12).fontColor(Theme.RED).fontFamily(Theme.MONO)
+              .textAlign(TextAlign.Center).padding(16)
+          } else {
+            Text('正在读取生辰…').fontSize(14).fontColor(Theme.DIM)
+          }
+          if (this.rawInfo.length > 0) {
+            Text(this.rawInfo).fontSize(10).fontColor(Theme.DIM).fontFamily(Theme.MONO)
+          }
+          Button('返回修改').height(40).fontSize(13).fontFamily(Theme.MONO)
+            .backgroundColor(Theme.GREEN).fontColor('#001208')
+            .onClick(() => { this.goBack() })
         }
         .layoutWeight(1)
         .justifyContent(FlexAlign.Center)
