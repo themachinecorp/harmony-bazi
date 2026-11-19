@@ -865,7 +865,7 @@
     var t = todayPillars(spec, lon, tz);
     var dayGan = chart.dayGan, dayWX = GAN_WX[dayGan], state = chart.strength.state;
     var mz = chart.pillars.month.zhi, dz = chart.pillars.day.zhi, yz = chart.pillars.year.zhi;
-    var hz = chart.pillars.hour.gan >= 0 ? chart.pillars.hour.zhi : -1;
+    var hz = (chart.pillars.hour && chart.pillars.hour.gan >= 0) ? chart.pillars.hour.zhi : -1;
     var sig = [];
     function push(label, value, weight, detail) { sig.push({ label: label, value: value, weight: weight, detail: detail || '' }); }
 
