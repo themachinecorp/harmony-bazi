@@ -1082,7 +1082,7 @@ export function dailyFortune(chart: Chart, spec: NowSpec, lon: number, tz: numbe
   push('今日日支五行', wxValue(ZHI_WX[t.day.zhi], dayWX), 7, '')
   const cs: CsState = changshengState(dayGan, t.day.zhi)
   push('今日日支 ' + t.day.zhiChar + ' 对日主为' + cs.name, cs.value, 10, '')
-  const kong: number[] = xunKong(t.day.gz)
+  const kong: number[] = xunKong(gzIndex(t.day.gan, t.day.zhi))
   const isKong: boolean = kong.indexOf(t.day.zhi) >= 0
   push(isKong ? '今日日支落空亡' : '今日日支不落空亡', isKong ? -0.8 : 0.2, 8,
     isKong ? ZHI[kong[0]] + ZHI[kong[1]] : '')
