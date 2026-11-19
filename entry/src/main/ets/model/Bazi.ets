@@ -1224,6 +1224,22 @@ export function tiaoHouOf(dg: string, mzi: number): string[] {
   return row[(mzi - 2 + 12) % 12]
 }
 
+/** 构造定长字符串数组（ArkTS 不接受含函数调用的数组字面量） */
+function arr2(a: string, b: string): string[] {
+  const out: string[] = []
+  out.push(a)
+  out.push(b)
+  return out
+}
+
+function arr3(a: string, b: string, c: string): string[] {
+  const out: string[] = []
+  out.push(a)
+  out.push(b)
+  out.push(c)
+  return out
+}
+
 /** 综合判盘 */
 export function judgeChart(p: PillarSet): JudgeResult {
   const dg: string = GAN[p.day.gan]
@@ -1270,30 +1286,30 @@ export function judgeChart(p: PillarSet): JudgeResult {
         dom = WX_ORDER[i]
       }
     }
-    favWx = [dom, sheng(dom), ke(dom)]
-    unfavWx = [dwx, helpWx]
+    favWx = arr3(dom, sheng(dom), ke(dom))
+    unfavWx = arr2(dwx, helpWx)
     yongShenText = '从格，顺' + dom + '之势'
     reasons.push('从格判定：' + fc.note + '；取' + dom + '及生助' + dom + '者为用')
   } else if (fc.isFollow && fc.kind === '从强') {
-    favWx = [dwx, helpWx, sheng(dwx)]
-    unfavWx = [ke(dwx), ctrlBy]
+    favWx = arr3(dwx, helpWx, sheng(dwx))
+    unfavWx = arr2(ke(dwx), ctrlBy)
     yongShenText = '从强，顺' + dwx + '之势'
     reasons.push('从强判定：' + fc.note)
   } else {
     let baseFav: string[] = []
     let baseUnfav: string[] = []
     if (ws.state === 'weak') {
-      baseFav = [dwx, helpWx]
-      baseUnfav = [ke(dwx), ctrlBy, sheng(dwx)]
+      baseFav = arr2(dwx, helpWx)
+      baseUnfav = arr3(ke(dwx), ctrlBy, sheng(dwx))
     } else if (ws.state === 'strong') {
-      baseFav = [sheng(dwx), ke(dwx), ctrlBy]
-      baseUnfav = [dwx, helpWx]
+      baseFav = arr3(sheng(dwx), ke(dwx), ctrlBy)
+      baseUnfav = arr2(dwx, helpWx)
     } else if (gj.name.indexOf('七杀') >= 0 || gj.name.indexOf('伤官') >= 0) {
-      baseFav = [sheng(dwx), ctrlBy]
-      baseUnfav = [dwx, helpWx]
+      baseFav = arr2(sheng(dwx), ctrlBy)
+      baseUnfav = arr2(dwx, helpWx)
     } else {
-      baseFav = [ke(dwx), ctrlBy, sheng(dwx)]
-      baseUnfav = [dwx, helpWx]
+      baseFav = arr3(ke(dwx), ctrlBy, sheng(dwx))
+      baseUnfav = arr2(dwx, helpWx)
     }
     // 调候：用神五行若原局很弱，提到最前
     const thWx: string[] = []
